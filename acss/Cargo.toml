@@ -1,0 +1,48 @@
+[package]
+name = "acss"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+crypto = { path = "../crypto" }
+network = { path = "../network" }
+protocol = { path = "../protocol" }
+utils = { path = "../utils" }
+anyhow = "1.0.58"
+log = "0.4.17"
+bincode = "1.3.3"
+aptos-crypto = { git ="https://github.com/sourav1547/aptos-core.git",  package ="aptos-crypto", features=["cloneable-private-keys", "fuzzing"]}
+aptos-bitvec = { git="https://github.com/sourav1547/aptos-core.git", package ="aptos-bitvec"}
+aptos-crypto-derive = { git = "https://github.com/sourav1547/aptos-core.git", package="aptos-crypto-derive"}
+num-bigint = { version = "0.3.2", features = ["rand"] } # need this version because it in turn depends on the right version of `rand` and `rand_core`
+num-integer = "0.1.42"
+num-traits = "0.2.11"
+bcs =  { git = "https://github.com/aptos-labs/bcs.git", rev = "d31fab9d81748e2594be5cd5cdf845786a30562d" }
+blstrs = { version = "0.6.1", features = ["serde"] }
+criterion = "0.4.0"
+hex = "0.4.3"
+ff = "0.12.0"
+group = "0.12.1"
+merlin = "1.3.0"
+more-asserts = "0.3.1"
+once_cell = "1.17.0"
+rand = "0.7.3"
+rand_core = "0.5.1"
+serde = { version = "1.0.139", features = ["derive"] }
+serde_json = "1.0.83"
+serde_bytes = "0.11.6"
+serde_with = "2.2.0"
+sha3 = "0.10.6"
+static_assertions = "1.1.0"
+zeroize = { version = "1.3.0", features = ["zeroize_derive"] }
+lazy_static = "1.4.0"
+subtle = "2.4"
+rand_chacha = "0.3"
+
+[features]
+assert-private-keys-not-cloneable = []
+
+[profile.bench]
+debug = true    # for running cargo flamegraph on benchmarks
