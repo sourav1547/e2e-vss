@@ -16,7 +16,8 @@ pub mod polynomials;
 pub mod evaluation_domain;
 pub mod tests;
 pub mod pvss;
-mod util;
+pub mod util;
+pub mod rbc;
 
 /// TODO(rand_core_hell): Domain-separator for our `rand_core_hell` randomness generation.
 const DST_RAND_CORE_HELL : &[u8; 21] = b"AptosRandCoreHellHack";
