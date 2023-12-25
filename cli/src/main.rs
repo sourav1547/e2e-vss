@@ -6,12 +6,13 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use acss::vss::messages::ACSSDeliver;
 use rand::thread_rng;
 
 use acss::DST_PVSS_PUBLIC_PARAMS_GENERATION;
 use acss::pvss::SharingConfiguration;
 use acss::vss::keys::InputSecret;
-use acss::vss::simple_acss::ACSSSenderParams;
+use acss::vss::simple_acss::{ACSSSenderParams, ACSSSender, ACSSReceiverParams, ACSSReceiver};
 use anyhow::{anyhow, ensure, Result};
 use group::Group;
 use tokio;
@@ -21,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use network::message::Id;
 use protocol::{Node, Protocol, ProtocolParams, run_protocol};
 
-use acss::vss::acss::{ACSS, ACSSParams};
+use acss::vss::simple_acss::ACSSParams;
 
 #[derive(Parser)]
 #[clap(version)]
@@ -175,28 +176,32 @@ fn main() -> Result<()> {
             rt.enable_all().build().unwrap().block_on(async move {
                 let mut handle = node.spawn_manager(stats.should_collect());
 
+                let n = node.get_num_nodes();
+                let th = node.get_threshold();
+                let sender = 0;
 
-                let n =4; 
-                let th = 2;
-                let mut rng = thread_rng();
+                let id = Id::new(0, vec![0]);
                 let sc = SharingConfiguration::new(th, n);
-                let s = InputSecret::new_random(&sc, true, &mut rng);
-                let add_params = ACSSSenderParams::new(sc, s);
+
+                if node.get_own_idx() == sender {
+                    let mut rng = thread_rng();
+                    let s = InputSecret::new_random(&sc, true, &mut rng);
+                    let add_params = ACSSSenderParams::new(sc.clone(), s);    
+                    let _ = run_protocol!(ACSSSender, handle.clone(), Arc::new(node.clone()), id.clone(), "DST".to_string(), add_params);
+                }
 
                 // Start timer
                 handle.handle_stats_start("Node");
+                let recv_add_params = ACSSReceiverParams::new(sender, sc);
+                let (_, mut rx) = run_protocol!(ACSSReceiver, handle.clone(), Arc::new(node.clone()), id.clone(), "DST".to_string(), recv_add_params);
+                let ACSSDeliver{..} = rx.recv().await.unwrap();
 
-                let max_round = 1;
-                for round in 0..max_round {
-                    let id = Id::new(round, vec![0]);
-                    let (_, mut rx) = run_protocol!(ACSS, handle.clone(), Arc::new(node.clone()), id.clone(), "DST".to_string(), add_params.clone());
-                    // let ACSSDeliver::new{ y, coms, sender } = rx.recv().await.unwrap();
-                    handle.round(round+1, Some(node.get_peer_map())).await;
-                }
+                // TODO:
+                // [] To close the running channels
+                
                 // End timer
                 handle.handle_stats_end().await;
 
-                
                 // Stats
                 let manager_stats = handle.sender_stats().await;
                 // Shutdown handle gracefully
@@ -222,9 +227,7 @@ fn main() -> Result<()> {
                         }
                         Stats::Off => {}
                     }
-
                 }
-
                 Ok(())
             })
         }
