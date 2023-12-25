@@ -334,7 +334,7 @@ mod tests {
         let h = G1Projective::hash_to_curve(seed, DST_PVSS_PUBLIC_PARAMS_GENERATION.as_slice(), b"h");
         let pp = ACSSParams::new(g, h);
         
-        let (nodes, handles) = generate_nodes::<ACSSParams>(10098, 10102, 2, pp.clone());
+        let (nodes, handles) = generate_nodes::<ACSSParams>(10098, 10114, 6, pp.clone());
 
         let n = nodes.len();
         let th= n/2;
@@ -343,9 +343,6 @@ mod tests {
 
         let id = Id::default();
         let dst = "DST".to_string();
-
-        let params = ACSSSenderParams::new(sc.clone(), s);
-        let _ = run_protocol!(ACSSSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 
         let mut rxs = Vec::new();
         for i in 0..n {
@@ -356,14 +353,17 @@ mod tests {
             rxs.push(rx);
         }
 
+        let params = ACSSSenderParams::new(sc.clone(), s);
+        let _ = run_protocol!(ACSSSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
+
         // let mut points = Vec::new();
         for (i, rx) in rxs.iter_mut().enumerate() {
             match rx.recv().await {
                 Some(ACSSDeliver { y, coms, .. }) => {
                     assert!(coms.len() == n);
-                    // let com: G1Projective = coms[nodes[i].get_own_idx()];
-                    // let e_com = G1Projective::multi_exp(pp.get_pp(), &y.share);
-                    // assert!(com.eq(&e_com));
+                    let com: G1Projective = coms[nodes[i].get_own_idx()];
+                    let e_com = G1Projective::multi_exp(pp.get_pp(), &y.share);
+                    assert!(com.eq(&e_com));
 
                     // TODO: To do the low-degree test.
                     // points.push((Scalar::from(nodes[i].get_own_idx() as u64 + 1), y));
