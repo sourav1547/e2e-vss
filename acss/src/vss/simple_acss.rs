@@ -152,7 +152,6 @@ impl ACSSReceiver {
         let ACSSReceiverParams{sender: acss_sender, sc} = self.additional_params.take().expect("No additional params!");
         self.params.handle.handle_stats_start(format!("ACSS Receiver {}", acss_sender));
 
-
         type B = Vec<G1Projective>;
         type P = Share;
         type F = dyn Fn(&B, &P) -> bool;
@@ -160,14 +159,6 @@ impl ACSSReceiver {
         let num_peers = self.params.node.get_num_nodes();
         let node = self.params.node.clone();
         let pp = node.get_pp();
-
-
-        let verify = |coms: &Vec<G1Projective>, share: &Share| -> bool {
-            let com: G1Projective = coms[node.get_own_idx()];
-            let e_com = G1Projective::multi_exp(pp, &share.share);
-            com.eq(&e_com)
-        };
-
 
         let verify: &'static F = &|coms: &Vec<G1Projective>, share: &Share| -> bool {
             let com: G1Projective = coms[node.get_own_idx()];
