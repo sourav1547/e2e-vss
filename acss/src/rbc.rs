@@ -353,9 +353,9 @@ mod tests {
         let pp = ACSSParams::new(g, h);
         
 
-        let verify : &'static F = &|b, p| -> bool {
-            true
-        };
+        // let verify : &'static F = &|b, p| -> bool {
+        //     true
+        // };
 
         let (nodes, handles) = generate_nodes::<ACSSParams>(10098, 10114, 2, pp);
         let n = nodes.len();

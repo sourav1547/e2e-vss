@@ -78,13 +78,13 @@ impl ACSSSender {
 
         type B = Vec<G1Projective>;
         type P = Share;
-        type F = dyn Fn(&B, &P) -> bool;
+        // type F = dyn Fn(&B, &P) -> bool;
 
         let ACSSSenderParams{sc, s} = self.additional_params.take().expect("No additional params given!");
 
         let num_peers = self.params.node.get_num_nodes();
         let node = self.params.node.clone();
-        let pp = node.get_pp();
+        // let pp = node.get_pp();
         
         let (coms, shares) = {
             // TODO: Use a different thread for faster verification
@@ -149,16 +149,16 @@ impl Protocol<ACSSParams, ACSSReceiverParams, Shutdown, ACSSDeliver> for ACSSRec
 
 impl ACSSReceiver {
     pub async fn run(&mut self) {
-        let ACSSReceiverParams{sender: acss_sender, sc} = self.additional_params.take().expect("No additional params!");
-        self.params.handle.handle_stats_start(format!("ACSS Receiver {}", acss_sender));
+        let ACSSReceiverParams{sender, ..} = self.additional_params.take().expect("No additional params!");
+        self.params.handle.handle_stats_start(format!("ACSS Receiver {}", sender));
 
         type B = Vec<G1Projective>;
         type P = Share;
-        type F = dyn Fn(&B, &P) -> bool;
+        // type F = dyn Fn(&B, &P) -> bool;
 
-        let num_peers = self.params.node.get_num_nodes();
+        // let num_peers = self.params.node.get_num_nodes();
         let node = self.params.node.clone();
-        let pp = node.get_pp();
+        // let pp = node.get_pp();
 
         // let verify: &'static F = &|coms: &Vec<G1Projective>, share: &Share| -> bool {
         //     let com: G1Projective = coms[node.get_own_idx()];
@@ -166,24 +166,16 @@ impl ACSSReceiver {
         //     com.eq(&e_com)
         // };
 
-        let add_params = RBCReceiverParams::new(node.get_own_idx());
+        let add_params = RBCReceiverParams::new(sender);
         let (_, mut rx) = run_protocol!(RBCReceiver<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), add_params);
 
         match rx.recv().await {
             Some(RBCDeliver { bmsg, pmsg, .. }) => {
-                let deliver = ACSSDeliver::new(pmsg, bmsg, acss_sender);
+                let deliver = ACSSDeliver::new(pmsg, bmsg, sender);
                 self.params.tx.send(deliver).await.expect("Send to parent failed!");
                 return
             },
             None => assert!(false),
-        }
-    }
-
-    async fn send_ready(&mut self, ready_sent: &mut bool, digest: Scalar) {
-        if !*ready_sent {
-            *ready_sent = true;
-            let ready = ReadyMsg::new(digest.clone());
-            self.params.handle.broadcast(&self.params.id, &ready).await;
         }
     }
 }
@@ -191,6 +183,8 @@ impl ACSSReceiver {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use blstrs::Scalar;
     use ff::Field;
     use group::Group;
@@ -234,6 +228,10 @@ mod tests {
             // txs.push(tx);
             rxs.push(rx);
         }
+
+        // Adding half second to start all the receivers, and starting the sender only after it.
+        let duration = Duration::from_millis(500);
+        thread::sleep(duration);
 
         let params = ACSSSenderParams::new(sc.clone(), s);
         let _ = run_protocol!(ACSSSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
