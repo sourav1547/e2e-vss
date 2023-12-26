@@ -1,6 +1,7 @@
 extern crate core;
 
 use std::collections::HashSet;
+use std::marker::PhantomData;
 use blstrs::Scalar;
 use network::subscribe_msg;
 use protocol::{Protocol, ProtocolParams, PublicParameters};
@@ -69,18 +70,33 @@ impl ReadyMsg {
 }
 
 #[derive(Debug, Clone)]
-pub struct RBCParams<B, P> {
-    pub verify: fn(&B, &P) -> bool,
+pub struct RBCParams<B, P, F>
+where
+    F: Fn(&B, &P) -> bool + Send,
+{
+    pub verify: F,
+    phantom_b: PhantomData<B>,
+    phantom_p: PhantomData<P>,
 }
 
-impl<B, P> RBCParams<B, P> {
-    pub fn new(verify: fn(&B, &P) -> bool) -> Self {
-        Self { verify }
+impl<B, P, F> RBCParams<B, P, F>
+    where
+        F: Fn(&B, &P) -> bool + Send,
+{
+pub fn new(verify: F) -> Self {
+        RBCParams { 
+            verify,
+            phantom_b: PhantomData,
+            phantom_p: PhantomData,
+         }
     }
 }
 
-impl<B,P> PublicParameters<fn(&B, &P) -> bool> for RBCParams<B,P> {
-    fn get_pp(&self) -> &fn(&B, &P) -> bool  {
+impl<B,P,F> PublicParameters<F> for RBCParams<B,P,F> 
+    where
+        F: Fn(&B, &P) -> bool + Send,
+{
+    fn get_pp(&self) -> &F  {
         &self.verify
     }
 }
@@ -99,14 +115,20 @@ impl<B,P> RBCSenderParams<B, P> {
         Self { bmsg, pmsg }
     }
 }
-pub struct RBCSender<B, P> {
-    params: ProtocolParams<RBCParams<B, P>, Shutdown, ()>,
+pub struct RBCSender<B,P,F> 
+    where
+        F: Fn(&B, &P) -> bool + Send,
+{
+params: ProtocolParams<RBCParams<B,P,F>, Shutdown, ()>,
     additional_params: Option<RBCSenderParams<B,P>>,
 }
 
 
-impl<B,P> Protocol<RBCParams<B,P>, RBCSenderParams<B,P>, Shutdown, ()> for RBCSender<B,P> {
-    fn new(params: ProtocolParams<RBCParams<B, P>, Shutdown, ()>) -> Self {
+impl<B,P,F> Protocol<RBCParams<B,P,F>, RBCSenderParams<B,P>, Shutdown, ()> for RBCSender<B,P,F> 
+    where   
+        F: Fn(&B, &P) -> bool + Send,
+{
+    fn new(params: ProtocolParams<RBCParams<B,P,F>, Shutdown, ()>) -> Self {
         Self { params, additional_params: None }
     }
 
@@ -115,9 +137,11 @@ impl<B,P> Protocol<RBCParams<B,P>, RBCSenderParams<B,P>, Shutdown, ()> for RBCSe
     }
 }
 
-impl<B,P> RBCSender<B, P> where
-    B : 'static + Serialize + Clone, 
-    P : 'static + Serialize + Clone,
+impl<B,P,F> RBCSender<B,P,F> 
+    where
+        B : 'static + Serialize + Clone, 
+        P : 'static + Serialize + Clone,
+        F: Fn(&B, &P) -> bool + Send,
  {
     pub async fn run(&mut self) {
         self.params.handle.handle_stats_start("ACSS Sender");
@@ -159,13 +183,20 @@ impl RBCReceiverParams {
     }
 }
 
-pub struct RBCReceiver<B,P> {
-    params: ProtocolParams<RBCParams<B,P>, Shutdown, RBCDeliver<B,P>>,
+pub struct RBCReceiver<B,P, F> 
+    where
+        F: Fn(&B, &P) -> bool + Send,
+{
+
+    params: ProtocolParams<RBCParams<B,P,F>, Shutdown, RBCDeliver<B,P>>,
     additional_params: Option<RBCReceiverParams>,
 }
 
-impl<B,P> Protocol<RBCParams<B,P>, RBCReceiverParams, Shutdown, RBCDeliver<B,P>> for RBCReceiver<B,P> {
-    fn new(params: ProtocolParams<RBCParams<B,P>, Shutdown, RBCDeliver<B,P>>) -> Self {
+impl<B,P,F> Protocol<RBCParams<B,P,F>, RBCReceiverParams, Shutdown, RBCDeliver<B,P>> for RBCReceiver<B,P,F> 
+    where
+        F: Fn(&B, &P) -> bool + Send,
+{
+    fn new(params: ProtocolParams<RBCParams<B,P,F>, Shutdown, RBCDeliver<B,P>>) -> Self {
         Self { params, additional_params: None }
     }
 
@@ -174,13 +205,14 @@ impl<B,P> Protocol<RBCParams<B,P>, RBCReceiverParams, Shutdown, RBCDeliver<B,P>>
     }
 }
 
-impl<B,P> RBCReceiver<B,P> where
-    B: 'static + Serialize + Clone + DeserializeOwned + Default, 
-    P: 'static + Serialize + Clone + DeserializeOwned + Default,
+impl<B,P,F> RBCReceiver<B,P,F> 
+    where
+        B: 'static + Serialize + Clone + DeserializeOwned + Default, 
+        P: 'static + Serialize + Clone + DeserializeOwned + Default,
+        F: Fn(&B, &P) -> bool + Send,
  {
     pub async fn run(&mut self) {
         let RBCReceiverParams{sender} = self.additional_params.take().expect("No additional params!");
-        let verify = self.params.node.get_pp().clone();
         self.params.handle.handle_stats_start(format!("ACSS Receiver {}", sender));
 
         let mut rx_send = subscribe_msg!(self.params.handle, &self.params.id, SendMsg<B,P>);
@@ -223,6 +255,8 @@ impl<B,P> RBCReceiver<B,P> where
                             bmsg = send_msg.bmsg;
                             pmsg = send_msg.pmsg;
 
+                            let verify = self.params.node.get_pp();
+
                             self.params.handle.handle_stats_event("Before send_msg.is_correct");
                             if verify(&bmsg, &pmsg) {
                                 self.params.handle.handle_stats_event("After send_msg.is_correct");
@@ -259,7 +293,7 @@ impl<B,P> RBCReceiver<B,P> where
                         // // Send ready
                         if echo_set.len() >= 2 * self.params.node.get_threshold() - 1 {
                             self.params.handle.handle_stats_event("Send ready from echo");
-                            self.send_ready(&mut ready_sent, digest).await;
+                                self.send_ready(&mut ready_sent, digest).await;
                         }
                     }
                 },
@@ -344,14 +378,20 @@ mod tests {
     use super::*;
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-    async fn test_acss() {
+    async fn test_rbc() {
         
-        fn verify(_: &Vec<G1Projective>, _: &Scalar) -> bool {
-            true 
-        }
+        type B = Vec<G1Projective>;
+        type P = Scalar;
+        type F = dyn Fn(&B, &P) -> bool + Send;
+
+        let verify: &'static F = &|b, p| -> bool {
+            // Your verification logic here
+            true
+        };
         let pp = RBCParams::new(verify);
         
-        let (nodes, handles) = generate_nodes::<RBCParams<Vec<G1Projective>, Scalar>>(10098, 10114, 2, pp);
+
+        let (nodes, handles) = generate_nodes::<RBCParams<B,P,F>>(10098, 10114, 2, pp);
 
         let n = nodes.len();
 
@@ -372,7 +412,7 @@ mod tests {
         for i in 0..n {
             let add_params = RBCReceiverParams::new(nodes[0].get_own_idx());
             let (_, rx) =
-                run_protocol!(RBCReceiver<Vec<G1Projective>, Scalar>, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
+                run_protocol!(RBCReceiver<B,P,&F>, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
             rxs.push(rx);
         }
 
@@ -381,7 +421,7 @@ mod tests {
         thread::sleep(duration);
 
         let params = RBCSenderParams::new(_bmsg, pmsgs);
-        let _ = run_protocol!(RBCSender<Vec<G1Projective>, Scalar>, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
+        let _ = run_protocol!(RBCSender<B,P,&F>, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 
         for (_, rx) in rxs.iter_mut().enumerate() {
             match rx.recv().await {

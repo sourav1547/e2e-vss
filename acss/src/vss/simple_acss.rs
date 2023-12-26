@@ -5,13 +5,14 @@ use std::thread;
 
 use blstrs::{G1Projective, Scalar};
 use network::subscribe_msg;
-use protocol::{Protocol, ProtocolParams, PublicParameters};
+use protocol::{Protocol, ProtocolParams, PublicParameters, run_protocol};
 use utils::{close_and_drain, shutdown_done, spawn_blocking};
 use utils::{rayon, tokio};
 
 use tokio::select;
 use tokio::sync::oneshot;
 
+use crate::rbc::{RBCSenderParams, RBCSender, RBCReceiverParams, RBCReceiver, RBCDeliver, RBCParams};
 use crate::vss::keys::InputSecret;
 
 use crate::fft::fft;
@@ -74,13 +75,17 @@ impl ACSSSender {
     pub async fn run(&mut self) {
         self.params.handle.handle_stats_start("ACSS Sender");
 
+        type B = Vec<G1Projective>;
+        type P = Share;
+        type F = dyn Fn(&B, &P) -> bool;
+
         let ACSSSenderParams{sc, s} = self.additional_params.take().expect("No additional params given!");
 
         let num_peers = self.params.node.get_num_nodes();
         let node = self.params.node.clone();
-        let (tx_oneshot, rx_oneshot) = oneshot::channel();
-
-        let _ = thread::spawn(move || {
+        let pp = node.get_pp();
+        
+        let (coms, shares) = {
             // TODO: Use a different thread for faster verification
             // let _ = thread::spawn(move || {
             let f = s.get_secret_f();
@@ -104,22 +109,34 @@ impl ACSSSender {
             }
 
             // TODO: To double check how this tx_oneshot works
-            let _ = tx_oneshot.send((coms , shares));
-        });
+            (coms , shares)
+        };
 
-        select! {
-            Ok((coms, mut shares)) = rx_oneshot => {
-                for (i, y_s) in shares.drain(0..).enumerate() {
-                    let send_msg = SendMsg::new(coms.clone(), y_s);
-                    self.params.handle.send(i, &self.params.id, &send_msg).await;
-                }
-                self.params.handle.handle_stats_end().await;
-            },
-            Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
-                self.params.handle.handle_stats_end().await;
-                shutdown_done!(tx_shutdown);
-            }
-        }
+        let verify = |coms: &Vec<G1Projective>, share: &Share| -> bool {
+            let com: G1Projective = coms[node.get_own_idx()];
+            let e_com = G1Projective::multi_exp(pp, &share.share);
+            com.eq(&e_com)
+        };
+        
+        let rbc_params = RBCParams::new(verify);
+        
+        let params = RBCSenderParams::new(coms, shares);
+        let _ = run_protocol!(RBCSender<B, P, &F>, self.params.handle, node, self.params.id, self.params.dst, params);
+
+        // let (tx_oneshot, rx_oneshot) = oneshot::channel();
+        // select! {
+        //     Ok((coms, mut shares)) = rx_oneshot => {
+        //         for (i, y_s) in shares.drain(0..).enumerate() {
+        //             let send_msg = SendMsg::new(coms.clone(), y_s);
+        //             self.params.handle.send(i, &self.params.id, &send_msg).await;
+        //         }
+        //         self.params.handle.handle_stats_end().await;
+        //     },
+        //     Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
+        //         self.params.handle.handle_stats_end().await;
+        //         shutdown_done!(tx_shutdown);
+        //     }
+        // }
     }
 }
 
@@ -155,6 +172,28 @@ impl ACSSReceiver {
         let ACSSReceiverParams{sender: acss_sender, sc} = self.additional_params.take().expect("No additional params!");
         self.params.handle.handle_stats_start(format!("ACSS Receiver {}", acss_sender));
 
+
+        type B = Vec<G1Projective>;
+        type P = Share;
+        type F = dyn Fn(&B, &P) -> bool;
+
+        let num_peers = self.params.node.get_num_nodes();
+        let node = self.params.node.clone();
+        let pp = node.get_pp();
+
+        let add_params = RBCReceiverParams::new(node.get_own_idx());
+        let (_, rx) = run_protocol!(RBCReceiver<B, P, &F>, self.params.handle, node, self.params.id, self.params.dst, add_params);
+
+        match rx.recv().await {
+            Some(RBCDeliver { bmsg, pmsg, .. }) => {
+                let deliver = ACSSDeliver::new(pmsg, bmsg, acss_sender);
+                self.params.tx.send(deliver).await.expect("Send to parent failed!");
+                return
+            },
+            None => assert!(false),
+        }
+
+        /***    
         let mut rx_send = subscribe_msg!(self.params.handle, &self.params.id, SendMsg);
         let mut rx_echo = subscribe_msg!(self.params.handle, &self.params.id, EchoMsg);
         let mut rx_ready = subscribe_msg!(self.params.handle, &self.params.id, ReadyMsg);
@@ -295,6 +334,7 @@ impl ACSSReceiver {
                 }
             }
         }
+        ***/
     }
 
     async fn send_ready(&mut self, ready_sent: &mut bool, digest: Scalar) {
