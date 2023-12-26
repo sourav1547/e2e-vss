@@ -72,7 +72,7 @@ impl ReadyMsg {
 #[derive(Debug, Clone)]
 pub struct RBCParams<B, P, F>
 where
-    F: Fn(&B, &P) -> bool + Send,
+    F: Fn(&B, &P) -> bool,
 {
     pub verify: F,
     phantom_b: PhantomData<B>,
@@ -81,7 +81,7 @@ where
 
 impl<B, P, F> RBCParams<B, P, F>
     where
-        F: Fn(&B, &P) -> bool + Send,
+        F: Fn(&B, &P) -> bool,
 {
 pub fn new(verify: F) -> Self {
         RBCParams { 
@@ -94,7 +94,7 @@ pub fn new(verify: F) -> Self {
 
 impl<B,P,F> PublicParameters<F> for RBCParams<B,P,F> 
     where
-        F: Fn(&B, &P) -> bool + Send,
+        F: Fn(&B, &P) -> bool,
 {
     fn get_pp(&self) -> &F  {
         &self.verify
@@ -117,16 +117,16 @@ impl<B,P> RBCSenderParams<B, P> {
 }
 pub struct RBCSender<B,P,F> 
     where
-        F: Fn(&B, &P) -> bool + Send,
+        F: Fn(&B, &P) -> bool,
 {
-params: ProtocolParams<RBCParams<B,P,F>, Shutdown, ()>,
+    params: ProtocolParams<RBCParams<B,P,F>, Shutdown, ()>,
     additional_params: Option<RBCSenderParams<B,P>>,
 }
 
 
 impl<B,P,F> Protocol<RBCParams<B,P,F>, RBCSenderParams<B,P>, Shutdown, ()> for RBCSender<B,P,F> 
     where   
-        F: Fn(&B, &P) -> bool + Send,
+        F: Fn(&B, &P) -> bool,
 {
     fn new(params: ProtocolParams<RBCParams<B,P,F>, Shutdown, ()>) -> Self {
         Self { params, additional_params: None }
@@ -141,8 +141,12 @@ impl<B,P,F> RBCSender<B,P,F>
     where
         B : 'static + Serialize + Clone, 
         P : 'static + Serialize + Clone,
-        F: Fn(&B, &P) -> bool + Send,
+        F: Fn(&B, &P) -> bool,
  {
+    pub fn new(params: ProtocolParams<RBCParams<B,P,F>, Shutdown, ()>) -> Self {
+        Self { params, additional_params: None }
+    }
+
     pub async fn run(&mut self) {
         self.params.handle.handle_stats_start("ACSS Sender");
 
@@ -185,7 +189,7 @@ impl RBCReceiverParams {
 
 pub struct RBCReceiver<B,P, F> 
     where
-        F: Fn(&B, &P) -> bool + Send,
+        F: Fn(&B, &P) -> bool,
 {
 
     params: ProtocolParams<RBCParams<B,P,F>, Shutdown, RBCDeliver<B,P>>,
@@ -194,7 +198,7 @@ pub struct RBCReceiver<B,P, F>
 
 impl<B,P,F> Protocol<RBCParams<B,P,F>, RBCReceiverParams, Shutdown, RBCDeliver<B,P>> for RBCReceiver<B,P,F> 
     where
-        F: Fn(&B, &P) -> bool + Send,
+        F: Fn(&B, &P) -> bool,
 {
     fn new(params: ProtocolParams<RBCParams<B,P,F>, Shutdown, RBCDeliver<B,P>>) -> Self {
         Self { params, additional_params: None }
@@ -209,7 +213,7 @@ impl<B,P,F> RBCReceiver<B,P,F>
     where
         B: 'static + Serialize + Clone + DeserializeOwned + Default, 
         P: 'static + Serialize + Clone + DeserializeOwned + Default,
-        F: Fn(&B, &P) -> bool + Send,
+        F: Fn(&B, &P) -> bool,
  {
     pub async fn run(&mut self) {
         let RBCReceiverParams{sender} = self.additional_params.take().expect("No additional params!");
@@ -382,7 +386,7 @@ mod tests {
         
         type B = Vec<G1Projective>;
         type P = Scalar;
-        type F = dyn Fn(&B, &P) -> bool + Send;
+        type F = dyn Fn(&B, &P) -> bool;
 
         let verify: &'static F = &|b, p| -> bool {
             // Your verification logic here
