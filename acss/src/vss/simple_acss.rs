@@ -6,13 +6,14 @@ use std::thread;
 use blstrs::{G1Projective, Scalar};
 use network::subscribe_msg;
 use protocol::{Protocol, ProtocolParams, PublicParameters, run_protocol};
+use utils::tokio::sync::mpsc;
 use utils::{close_and_drain, shutdown_done, spawn_blocking};
 use utils::{rayon, tokio};
 
 use tokio::select;
 use tokio::sync::oneshot;
 
-use crate::rbc::{RBCSenderParams, RBCSender, RBCReceiverParams, RBCReceiver, RBCDeliver, RBCParams};
+use crate::rbc::{RBCSenderParams, RBCSender, RBCReceiverParams, RBCReceiver, RBCDeliver};
 use crate::vss::keys::InputSecret;
 
 use crate::fft::fft;
@@ -112,31 +113,10 @@ impl ACSSSender {
             (coms , shares)
         };
 
-        let verify = |coms: &Vec<G1Projective>, share: &Share| -> bool {
-            let com: G1Projective = coms[node.get_own_idx()];
-            let e_com = G1Projective::multi_exp(pp, &share.share);
-            com.eq(&e_com)
-        };
-        
-        let rbc_params = RBCParams::new(verify);
-        
-        let params = RBCSenderParams::new(coms, shares);
-        let _ = run_protocol!(RBCSender<B, P, &F>, self.params.handle, node, self.params.id, self.params.dst, params);
 
-        // let (tx_oneshot, rx_oneshot) = oneshot::channel();
-        // select! {
-        //     Ok((coms, mut shares)) = rx_oneshot => {
-        //         for (i, y_s) in shares.drain(0..).enumerate() {
-        //             let send_msg = SendMsg::new(coms.clone(), y_s);
-        //             self.params.handle.send(i, &self.params.id, &send_msg).await;
-        //         }
-        //         self.params.handle.handle_stats_end().await;
-        //     },
-        //     Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
-        //         self.params.handle.handle_stats_end().await;
-        //         shutdown_done!(tx_shutdown);
-        //     }
-        // }
+        let params = RBCSenderParams::new(coms, shares);
+        let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), params);
+
     }
 }
 
@@ -181,7 +161,21 @@ impl ACSSReceiver {
         let node = self.params.node.clone();
         let pp = node.get_pp();
 
-        let add_params = RBCReceiverParams::new(node.get_own_idx());
+
+        let verify = |coms: &Vec<G1Projective>, share: &Share| -> bool {
+            let com: G1Projective = coms[node.get_own_idx()];
+            let e_com = G1Projective::multi_exp(pp, &share.share);
+            com.eq(&e_com)
+        };
+
+
+        let verify: &'static F = &|coms: &Vec<G1Projective>, share: &Share| -> bool {
+            let com: G1Projective = coms[node.get_own_idx()];
+            let e_com = G1Projective::multi_exp(pp, &share.share);
+            com.eq(&e_com)
+        };
+
+        let add_params = RBCReceiverParams::new(node.get_own_idx(), verify);
         let (_, rx) = run_protocol!(RBCReceiver<B, P, &F>, self.params.handle, node, self.params.id, self.params.dst, add_params);
 
         match rx.recv().await {
@@ -192,149 +186,6 @@ impl ACSSReceiver {
             },
             None => assert!(false),
         }
-
-        /***    
-        let mut rx_send = subscribe_msg!(self.params.handle, &self.params.id, SendMsg);
-        let mut rx_echo = subscribe_msg!(self.params.handle, &self.params.id, EchoMsg);
-        let mut rx_ready = subscribe_msg!(self.params.handle, &self.params.id, ReadyMsg);
-
-        // TODO: 
-        // [] Figure out how to use the networking channels
-        // [] Run the code in AWS setting.
-
-        // let c_to_key = |c: &Scalar| c.to_bytes_be();
-        // let mut c_data: HashMap<[u8; 48], (Vec<G1Projective>, HashMap<usize, Scalar>)> = HashMap::new();
-        let mut echo_set = HashSet::new();  // Tracks parties we have received echos from
-        let mut ready_sent = false;
-        let mut ready_set = HashSet::new();  // Tracks parties we have received readys from
-        // let mut c_count: HashMap<[u8; 48], usize> = HashMap::new();
-        let num_peers = self.params.node.get_num_nodes();
-        let mut coms: Vec<G1Projective> = Vec::with_capacity(num_peers);
-        let mut share = Share::identity();
-
-        loop {
-            select! {
-                Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
-                    self.params.handle.unsubscribe::<EchoMsg>(&self.params.id).await;
-                    close_and_drain!(rx_echo);
-                    self.params.handle.unsubscribe::<SendMsg>(&self.params.id).await;
-                    close_and_drain!(rx_send);
-                    self.params.handle.unsubscribe::<ReadyMsg>(&self.params.id).await;
-                    close_and_drain!(rx_ready);
-                    close_and_drain!(self.params.rx);
-
-                    self.params.handle.handle_stats_end().await;
-
-                    shutdown_done!(tx_shutdown);
-                },
-
-                Some(msg) = rx_send.recv() => {
-                    if msg.get_sender() == &acss_sender {
-                        if let Ok(send_msg) = msg.get_content::<SendMsg>() {
-
-                            coms = send_msg.coms.clone();
-                            share = send_msg.share;
-
-                            self.params.handle.handle_stats_event("Before send_msg.is_correct");
-                            if spawn_blocking!(send_msg.is_correct(
-                                self.params.node.get_own_idx(),
-                                &sc,
-                                self.params.node.get_num_nodes())
-                            ) {
-                                self.params.handle.handle_stats_event("After send_msg.is_correct");
-                                // Echo message
-                                for i in 0..self.params.node.get_num_nodes() {
-                                    // TODO: Compute the actual hash
-                                    let digest = Scalar::from(4);
-                                    let echo = EchoMsg::new(digest);
-                                    self.params.handle.send(i, &self.params.id, &echo).await;
-                                }
-                                self.params.handle.unsubscribe::<SendMsg>(&self.params.id).await;
-                                close_and_drain!(rx_send);
-                                self.params.handle.handle_stats_event("After sending echo");
-                            }
-                        }
-                    }
-                },
-
-                Some(msg) = rx_echo.recv() => {
-                    // Get sender
-                    let sender_idx = msg.get_sender();
-                    if let Ok(echo_msg) = msg.get_content::<EchoMsg>() {
-                        if !echo_set.contains(sender_idx) {
-                            echo_set.insert(*sender_idx);
-                        }
-                        // let c_key = c_to_key(&digest);
-                        // let count = match c_count.remove(&c_key) {
-                        //     None => 1,
-                        //     Some(x) => x + 1,
-                        // };
-                        // c_count.insert(c_key.clone(), count);
-                        let EchoMsg {digest} = echo_msg;
-
-                        // // Send ready
-                        if echo_set.len() >= 2 * self.params.node.get_threshold() - 1 {
-                            self.params.handle.handle_stats_event("Send ready from echo");
-                            self.send_ready(&mut ready_sent, digest).await;
-                        }
-                    }
-                },
-
-
-                Some(msg) = rx_ready.recv() => {
-                    // Get sender
-                    let sender_idx = msg.get_sender();
-                    if let Ok(ready_msg) = msg.get_content::<ReadyMsg>() {
-
-                        if !ready_set.contains(sender_idx) {
-                            ready_set.insert(*sender_idx);
-                            let ReadyMsg {digest} = ready_msg;
-
-                            // Ready amplification
-                            if ready_set.len() >= self.params.node.get_threshold() {
-                                self.params.handle.handle_stats_event("Send ready from ready");
-                                self.send_ready(&mut ready_sent, digest).await;
-                            }
-                                                    // // Send ready
-                            if ready_set.len() >= 2 * self.params.node.get_threshold() - 1 {
-                                
-                                // TODO: Check if the node already received coms from the sender or not before returning ACSSDeliver
-                                if coms.len() > 0 {
-                                    self.params.handle.unsubscribe::<ReadyMsg>(&self.params.id).await;
-
-                                    // Close everything
-                                    self.params.handle.unsubscribe::<EchoMsg>(&self.params.id).await;
-                                    close_and_drain!(rx_echo);
-                                    self.params.handle.unsubscribe::<SendMsg>(&self.params.id).await;
-                                    close_and_drain!(rx_send);
-                                    close_and_drain!(self.params.rx);
-
-
-                                    self.params.handle.handle_stats_event("Output");
-                                    self.params.handle.handle_stats_end().await;
-
-                                    let deliver = ACSSDeliver::new(share, coms, acss_sender);
-                                    self.params.tx.send(deliver).await.expect("Send to parent failed!");
-
-                                    // Close everything
-                                    self.params.handle.unsubscribe::<EchoMsg>(&self.params.id).await;
-                                    close_and_drain!(rx_echo);
-                                    self.params.handle.unsubscribe::<SendMsg>(&self.params.id).await;
-                                    close_and_drain!(rx_send);
-                                    close_and_drain!(self.params.rx);
-
-                                    self.params.handle.handle_stats_event("Output");
-                                    self.params.handle.handle_stats_end().await;
-
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        ***/
     }
 
     async fn send_ready(&mut self, ready_sent: &mut bool, digest: Scalar) {
@@ -411,22 +262,6 @@ mod tests {
                 None => assert!(false),
             }
         }
-        // let mut xs = Vec::new();
-        // let mut ys = Vec::new();
-        // let mut rs = Vec::new();
-        // for (x, y) in points {
-        //     xs.push(x);
-        //     ys.push(y.share[0]);
-        //     rs.push(y.share[1]);
-        // }
-        // assert_eq!(value, interpolate_at(&xs, ys, &Scalar::zero(), |s| s.invert().unwrap(), Scalar::zero()));
-        // for tx in txs.iter() {
-        //     shutdown!(tx, Shutdown);
-        // }
-        // // TODO: To shutdown the receipients
-        // for handle in handles {
-        //     handle.shutdown().await;
-        // }
         assert!(true)
     }
     
