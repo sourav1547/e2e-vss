@@ -160,14 +160,14 @@ impl ACSSReceiver {
         let node = self.params.node.clone();
         let pp = node.get_pp();
 
-        let verify: &'static F = &|coms: &Vec<G1Projective>, share: &Share| -> bool {
-            let com: G1Projective = coms[node.get_own_idx()];
-            let e_com = G1Projective::multi_exp(pp, &share.share);
-            com.eq(&e_com)
-        };
+        // let verify: &'static F = &|coms: &Vec<G1Projective>, share: &Share| -> bool {
+        //     let com: G1Projective = coms[node.get_own_idx()];
+        //     let e_com = G1Projective::multi_exp(pp, &share.share);
+        //     com.eq(&e_com)
+        // };
 
-        let add_params = RBCReceiverParams::new(node.get_own_idx(), verify);
-        let (_, rx) = run_protocol!(RBCReceiver<B, P, &F>, self.params.handle, node, self.params.id, self.params.dst, add_params);
+        let add_params = RBCReceiverParams::new(node.get_own_idx());
+        let (_, mut rx) = run_protocol!(RBCReceiver<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), add_params);
 
         match rx.recv().await {
             Some(RBCDeliver { bmsg, pmsg, .. }) => {

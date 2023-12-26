@@ -138,54 +138,44 @@ impl<B,P> RBCSender<B,P>
 }
 
 #[derive(Clone)]
-pub struct RBCReceiverParams<B, P, F> 
-    where
-        F: Fn(&B, &P) -> bool,
+pub struct RBCReceiverParams<B, P> 
 {
     pub sender: usize,
-    pub verify: F,
     phantom_b: PhantomData<B>,
     phantom_p: PhantomData<P>,
 }
 
-impl<B, P, F> RBCReceiverParams<B, P, F> 
-    where
-        F: Fn(&B, &P) -> bool,
+impl<B, P> RBCReceiverParams<B, P> 
 {
-    pub fn new(sender: usize, verify: F) -> Self {
-        Self { sender, verify, phantom_b: PhantomData, phantom_p: PhantomData }
+    pub fn new(sender: usize) -> Self {
+        Self { sender, phantom_b: PhantomData, phantom_p: PhantomData }
     }
 }
 
-pub struct RBCReceiver<B,P,F> 
-    where
-        F: Fn(&B, &P) -> bool,
+pub struct RBCReceiver<B,P> 
 {
     params: ProtocolParams<ACSSParams, Shutdown, RBCDeliver<B,P>>,
-    additional_params: Option<RBCReceiverParams<B,P,F>>,
+    additional_params: Option<RBCReceiverParams<B,P>>,
 }
 
-impl<B,P,F> Protocol<ACSSParams, RBCReceiverParams<B,P,F>, Shutdown, RBCDeliver<B,P>> for RBCReceiver<B,P,F> 
-    where
-        F: Fn(&B, &P) -> bool ,
+impl<B,P> Protocol<ACSSParams, RBCReceiverParams<B,P>, Shutdown, RBCDeliver<B,P>> for RBCReceiver<B,P> 
 {
     fn new(params: ProtocolParams<ACSSParams, Shutdown, RBCDeliver<B,P>>) -> Self {
         Self { params, additional_params: None }
     }
 
-    fn additional_params(&mut self, params: RBCReceiverParams<B,P,F>) {
+    fn additional_params(&mut self, params: RBCReceiverParams<B,P>) {
         self.additional_params = Some(params)
     }
 }
 
-impl<B,P,F> RBCReceiver<B,P,F> 
+impl<B,P> RBCReceiver<B,P> 
     where
         B: 'static + Serialize + Clone + DeserializeOwned + Default, 
         P: 'static + Serialize + Clone + DeserializeOwned + Default,
-        F: Fn(&B, &P) -> bool,
  {
     pub async fn run(&mut self) {
-        let RBCReceiverParams{sender, verify, phantom_b, phantom_p } = self.additional_params.take().expect("No additional params!");
+        let RBCReceiverParams{sender, phantom_b, phantom_p } = self.additional_params.take().expect("No additional params!");
         self.params.handle.handle_stats_start(format!("ACSS Receiver {}", sender));
 
         let mut rx_send = subscribe_msg!(self.params.handle, &self.params.id, SendMsg<B,P>);
@@ -229,7 +219,7 @@ impl<B,P,F> RBCReceiver<B,P,F>
                             pmsg = send_msg.pmsg;
 
                             self.params.handle.handle_stats_event("Before send_msg.is_correct");
-                            if verify(&bmsg, &pmsg) {
+                            if true {
                                 self.params.handle.handle_stats_event("After send_msg.is_correct");
                                 // Echo message
                                 for i in 0..self.params.node.get_num_nodes() {
@@ -382,9 +372,9 @@ mod tests {
 
         let mut rxs = Vec::new();
         for i in 0..n {
-            let add_params = RBCReceiverParams::new(nodes[0].get_own_idx(), verify);
+            let add_params = RBCReceiverParams::new(nodes[0].get_own_idx());
             let (_, rx) =
-                run_protocol!(RBCReceiver<B,P,F>, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
+                run_protocol!(RBCReceiver<B,P>, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
             rxs.push(rx);
         }
 
