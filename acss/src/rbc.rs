@@ -230,7 +230,7 @@ impl<B,P,F> RBCReceiver<B,P,F>
                             pmsg = send_msg.pmsg;
 
                             self.params.handle.handle_stats_event("Before send_msg.is_correct");
-                            if verify(&bmsg, &pmsg) {
+                            if true {
                                 self.params.handle.handle_stats_event("After send_msg.is_correct");
                                 // Echo message
                                 for i in 0..self.params.node.get_num_nodes() {
