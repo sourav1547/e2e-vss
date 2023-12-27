@@ -6,6 +6,7 @@ use crate::{G1Projective, Scalar, pvss::SharingConfiguration};
 use super::common::{Share, low_deg_test};
 
 pub struct Shutdown(pub oneshot::Sender<()>);
+use aptos_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature};
 
 #[derive(Debug)]
 pub struct ACSSDeliver {
@@ -21,55 +22,25 @@ impl ACSSDeliver {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct SendMsg {
+pub struct ShareMsg {
     pub coms: Vec<G1Projective>,
     pub share: Share,
 }
 
-/// Checks whether the commitment is to a low-degree polynomial
-pub fn verify_com(coms: &Vec<G1Projective>, sc: &SharingConfiguration) -> bool {
-    low_deg_test(coms, sc)
-}
-
-// pub fn verify_eval(coms:&Vec<G1Projective>, pp: &PublicParameters, i:usize, share: &Share) -> bool {
-//     let com = G1Projective::multi_exp(pp.get_bases(), share.get());
-//     coms[i].eq(&com)
-// }
-
-impl SendMsg {
+impl ShareMsg {
     pub fn new(coms: Vec<G1Projective>, share: Share) -> Self {
-        Self { coms, share}
-    }
-
-    pub fn is_correct(&self, own_idx: usize, sc: &SharingConfiguration,  num_peers: usize) -> bool {
-        if num_peers != self.coms.len() { return false; }
-        if !verify_com(&self.coms, sc) { return false; }
-
-        // TODO: To add  the share validation check
-        true
+        Self {coms, share}
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct EchoMsg {
-    // TODO: To check whether to use a byte string instead
-    pub digest: Scalar, // Hash of the commitment
+#[derive(Serialize, Deserialize, Clone)]
+pub struct AckMsg {
+    pub sig: Ed25519Signature,
 }
 
-impl EchoMsg {
-    pub fn new(digest: Scalar) -> Self {
-        Self { digest }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct ReadyMsg {
-    pub digest: Scalar
-}
-
-impl ReadyMsg {
-    pub fn new(digest: Scalar) -> Self {
-        Self { digest }
+impl AckMsg {
+    pub fn new(sig: Ed25519Signature) -> Self {
+        Self {sig}
     }
 }
 

@@ -17,6 +17,7 @@ use tokio::sync::oneshot;
 
 use serde::{Serialize, Deserialize};
 use crate::vss::messages::Shutdown;
+use crate::messages::*;
 
 pub const NIVSS_HASH_TO_SCALAR_DST: &[u8; 24] = b"NIVSS_HASH_TO_SCALAR_DST";
 
@@ -29,47 +30,6 @@ pub struct RBCDeliver<B,P> {
 impl<B,P> RBCDeliver<B,P> {
     pub fn new(bmsg: B, pmsg: P, sender: usize) -> Self {
         Self { bmsg, pmsg, sender }
-    }
-}
-
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct SendMsg<B, P> where
-    B: Serialize + Clone, 
-    P: Serialize,
- {
-    pub bmsg: B,
-    pub pmsg: P,
-}
-
-impl<B,P> SendMsg<B,P> where 
-    B: Serialize + Clone, 
-    P: Serialize,
-{
-    pub fn new(bmsg: B, pmsg: P) -> Self {
-        Self { bmsg, pmsg }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct EchoMsg {
-    pub digest: [u8; 32], // Hash of the commitment
-}
-
-impl EchoMsg {
-    pub fn new(digest: [u8; 32]) -> Self {
-        Self { digest }
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct ReadyMsg {
-    pub digest: [u8; 32]
-}
-
-impl ReadyMsg {
-    pub fn new(digest: [u8; 32]) -> Self {
-        Self { digest }
     }
 }
 
@@ -381,7 +341,7 @@ mod tests {
         let n = end-start;
         let t = n/2;
         let pp = RBCParams::new(n, t);
-        
+
         let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a Vec<blstrs::G1Projective>, &'b Scalar) -> bool + Send + Sync>> = Arc::new(Box::new(|a, b| true));
 
         let (nodes, handles) = generate_nodes::<RBCParams>(10098, 10114, t, pp);
