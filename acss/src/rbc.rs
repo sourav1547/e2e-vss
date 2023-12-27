@@ -1,6 +1,7 @@
 extern crate core;
 use std::collections::HashSet;
 use std::marker::PhantomData;
+use std::sync::{Arc, Mutex};
 use blstrs::Scalar;
 use network::subscribe_msg;
 use protocol::{Protocol, ProtocolParams, PublicParameters};
@@ -140,34 +141,34 @@ impl<B,P> RBCSender<B,P>
 #[derive(Clone)]
 pub struct RBCReceiverParams<B, P, F> 
     where
-        F: Fn(&B, &P) -> bool,
+        F: Fn(&B, &P) -> bool + Send + Sync + 'static + ?Sized,
 {
     pub sender: usize,
-    pub verify: F,
+    pub verify: Arc<F>,
     phantom_b: PhantomData<B>,
     phantom_p: PhantomData<P>,
 }
 
 impl<B, P, F> RBCReceiverParams<B, P, F> 
     where
-        F: Fn(&B, &P) -> bool,
+        F: Fn(&B, &P) -> bool + Send + Sync + 'static,
 {
-    pub fn new(sender: usize, verify: F) -> Self {
+    pub fn new(sender: usize, verify: Arc<F>) -> Self {
         Self { sender, verify, phantom_b: PhantomData, phantom_p: PhantomData }
     }
 }
 
 pub struct RBCReceiver<B,P,F> 
     where
-        F: Fn(&B, &P) -> bool,
+        F: Fn(&B, &P) -> bool + Send + Sync + 'static + ?Sized,
 {
     params: ProtocolParams<ACSSParams, Shutdown, RBCDeliver<B,P>>,
     additional_params: Option<RBCReceiverParams<B,P,F>>,
 }
 
-impl<B,P,F> Protocol<ACSSParams, RBCReceiverParams<B,P,F>, Shutdown, RBCDeliver<B,P>> for RBCReceiver<B,P,F> 
+impl<B,P,F: ?Sized> Protocol<ACSSParams, RBCReceiverParams<B,P,F>, Shutdown, RBCDeliver<B,P>> for RBCReceiver<B,P,F> 
     where
-        F: Fn(&B, &P) -> bool ,
+        F: Fn(&B, &P) -> bool + Send + Sync + 'static,
 {
     fn new(params: ProtocolParams<ACSSParams, Shutdown, RBCDeliver<B,P>>) -> Self {
         Self { params, additional_params: None }
@@ -182,7 +183,7 @@ impl<B,P,F> RBCReceiver<B,P,F>
     where
         B: 'static + Serialize + Clone + DeserializeOwned + Default, 
         P: 'static + Serialize + Clone + DeserializeOwned + Default,
-        F: Fn(&B, &P) -> bool,
+        F: Fn(&B, &P) -> bool + Send + Sync + 'static,
  {
     pub async fn run(&mut self) {
         let RBCReceiverParams{sender, verify, phantom_b, phantom_p } = self.additional_params.take().expect("No additional params!");
@@ -354,7 +355,8 @@ mod tests {
         
         type B = Vec<G1Projective>;
         type P = Scalar;
-        type F = dyn Fn(&B, &P) -> bool;
+        // type F = dyn Fn(&B, &P) -> bool;
+        type F = Box<dyn Fn(&B, &P) -> bool + Send + Sync>;
 
         
         let seed = b"hello";
@@ -362,10 +364,7 @@ mod tests {
         let h = G1Projective::hash_to_curve(seed, DST_PVSS_PUBLIC_PARAMS_GENERATION.as_slice(), b"h");
         let pp = ACSSParams::new(g, h);
         
-
-        let verify : &'static F = &|b, p| -> bool {
-            true
-        };
+        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a Vec<blstrs::G1Projective>, &'b Scalar) -> bool + Send + Sync>> = Arc::new(Box::new(|a, b| true));
 
         let (nodes, handles) = generate_nodes::<ACSSParams>(10098, 10114, 2, pp);
         let n = nodes.len();
@@ -382,7 +381,7 @@ mod tests {
 
         let mut rxs = Vec::new();
         for i in 0..n {
-            let add_params = RBCReceiverParams::new(nodes[0].get_own_idx(), verify);
+            let add_params = RBCReceiverParams::new(nodes[0].get_own_idx(), verify.clone());
             let (_, rx) =
                 run_protocol!(RBCReceiver<B,P,F>, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
             rxs.push(rx);

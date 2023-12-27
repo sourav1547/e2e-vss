@@ -1,6 +1,7 @@
 extern crate core;
 
 use std::collections::HashSet;
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use blstrs::{G1Projective, Scalar};
@@ -154,20 +155,22 @@ impl ACSSReceiver {
 
         type B = Vec<G1Projective>;
         type P = Share;
-        type F = dyn Fn(&B, &P) -> bool;
+        // type F = dyn Fn(&B, &P) -> bool;
+        type F = Box<dyn Fn(&Vec<G1Projective>, &Share) -> bool + Send + Sync>;
 
         let num_peers = self.params.node.get_num_nodes();
         let node = self.params.node.clone();
-        let pp = node.get_pp();
 
-        let verify: &'static F = &|coms: &Vec<G1Projective>, share: &Share| -> bool {
-            let com: G1Projective = coms[node.get_own_idx()];
+        let node_clone = self.params.node.clone();
+        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a Vec<G1Projective>, &'b Share) -> bool + Send + Sync>> = Arc::new(Box::new(move |coms, share| {
+            let com: G1Projective = coms[node_clone.get_own_idx()];
+            let pp = node_clone.get_pp();
             let e_com = G1Projective::multi_exp(pp, &share.share);
             com.eq(&e_com)
-        };
+        }));
 
         let add_params = RBCReceiverParams::new(node.get_own_idx(), verify);
-        let (_, rx) = run_protocol!(RBCReceiver<B, P, &F>, self.params.handle, node, self.params.id, self.params.dst, add_params);
+        let (_, mut rx) = run_protocol!(RBCReceiver<B, P, F>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), add_params);
 
         match rx.recv().await {
             Some(RBCDeliver { bmsg, pmsg, .. }) => {
