@@ -14,22 +14,22 @@ use super::simple_acss::{ACSSSenderParams, ACSSReceiver, ACSSReceiverParams, ACS
 use super::messages::{Shutdown, ACSSDeliver};
 
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ACSSParams {
-    bases: [G1Projective; 2]
-}
+// #[derive(Debug, Clone, Serialize, Deserialize)]
+// pub struct ACSSParams {
+//     bases: [G1Projective; 2]
+// }
 
-impl ACSSParams {
-    pub fn new(g: G1Projective, h:G1Projective) -> Self {
-        Self { bases: [g, h] }
-    }
-}
+// impl ACSSParams {
+//     pub fn new(g: G1Projective, h:G1Projective) -> Self {
+//         Self { bases: [g, h] }
+//     }
+// }
 
-impl PublicParameters<[G1Projective; 2]> for ACSSParams {
-    fn get_pp(&self) -> &[G1Projective; 2]  {
-        &self.bases
-    }
-}
+// impl PublicParameters<[G1Projective; 2]> for ACSSParams {
+//     fn get_pp(&self) -> &[G1Projective; 2]  {
+//         &self.bases
+//     }
+// }
 
 pub struct ACSS {
     params: ProtocolParams<ACSSParams, Shutdown, ()>,

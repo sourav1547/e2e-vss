@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use acss::rbc::RBCParams;
 use acss::vss::messages::ACSSDeliver;
 use rand::thread_rng;
 
@@ -22,7 +23,7 @@ use serde::{Deserialize, Serialize};
 use network::message::Id;
 use protocol::{Node, Protocol, ProtocolParams, run_protocol};
 
-use acss::vss::simple_acss::ACSSParams;
+// use acss::vss::simple_acss::ACSSParams;
 
 #[derive(Parser)]
 #[clap(version)]
@@ -116,7 +117,7 @@ fn read_to_string(path: &Option<PathBuf>) -> Result<String> {
 
 #[derive(Serialize, Deserialize)]
 struct NodeWithGens {
-    pub node: Node<ACSSParams>,
+    pub node: Node<RBCParams>,
     pub g: G1Projective,
     pub h: G1Projective,
 }
@@ -143,8 +144,8 @@ fn main() -> Result<()> {
             let seed = b"hello";
             let g = G1Projective::generator(); 
             let h = G1Projective::hash_to_curve(seed, DST_PVSS_PUBLIC_PARAMS_GENERATION.as_slice(), b"h");
-            let params = ACSSParams::new(g, h);
-            let configs: Vec<_>= Node::<ACSSParams>::
+            let params = RBCParams::new(n, n/2);
+            let configs: Vec<_>= Node::<RBCParams>::
             generate_nodes(node_addrs, f+1, params)?;
 
             for (i, cfg) in configs.into_iter().enumerate() {
@@ -182,17 +183,18 @@ fn main() -> Result<()> {
 
                 let id = Id::new(0, vec![0]);
                 let sc = SharingConfiguration::new(th, n);
+                let bases = [g,h];
 
                 if node.get_own_idx() == sender {
                     let mut rng = thread_rng();
                     let s = InputSecret::new_random(&sc, true, &mut rng);
-                    let add_params = ACSSSenderParams::new(sc.clone(), s);    
+                    let add_params = ACSSSenderParams::new(sc.clone(), s, bases);    
                     let _ = run_protocol!(ACSSSender, handle.clone(), Arc::new(node.clone()), id.clone(), "DST".to_string(), add_params);
                 }
 
                 // Start timer
                 handle.handle_stats_start("Node");
-                let recv_add_params = ACSSReceiverParams::new(sender, sc);
+                let recv_add_params = ACSSReceiverParams::new(sender, sc, bases);
                 let (_, mut rx) = run_protocol!(ACSSReceiver, handle.clone(), Arc::new(node.clone()), id.clone(), "DST".to_string(), recv_add_params);
                 let ACSSDeliver{..} = rx.recv().await.unwrap();
 

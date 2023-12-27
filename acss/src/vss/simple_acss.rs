@@ -14,57 +14,40 @@ use utils::{rayon, tokio};
 use tokio::select;
 use tokio::sync::oneshot;
 
-use crate::rbc::{RBCSenderParams, RBCSender, RBCReceiverParams, RBCReceiver, RBCDeliver};
+use crate::rbc::{RBCSenderParams, RBCSender, RBCReceiverParams, RBCReceiver, RBCDeliver, RBCParams};
 use crate::vss::keys::InputSecret;
 
 use crate::fft::fft;
 use crate::pvss::SharingConfiguration;
 
-use crate::vss::messages::SendMsg;
 use super::common::Share;
 use super::messages::*;
 use serde::{Serialize, Deserialize};
 
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ACSSParams {
-    bases: [G1Projective; 2]
-}
-
-impl ACSSParams {
-    pub fn new(g: G1Projective, h:G1Projective) -> Self {
-        Self { bases: [g, h] }
-    }
-}
-
-impl PublicParameters<[G1Projective; 2]> for ACSSParams {
-    fn get_pp(&self) -> &[G1Projective; 2]  {
-        &self.bases
-    }
-}
 
 // This would be nicer if it were generic. However, to sensibly do this, one would have to define
 // traits for groups/fields (because e.g., Ark does not use the RustCrypto group, field, etc. traits)
 // which is out of scope.
 #[derive(Clone)]
 pub struct ACSSSenderParams {
+    pub bases: [G1Projective; 2],
     pub sc: SharingConfiguration, 
     pub s: InputSecret,
 }
 
 impl ACSSSenderParams {
-    pub fn new(sc: SharingConfiguration, s: InputSecret) -> Self {
-        Self { sc, s }
+    pub fn new(sc: SharingConfiguration, s: InputSecret, bases: [G1Projective; 2]) -> Self {
+        Self { sc, s, bases }
     }
 }
 pub struct ACSSSender {
-    params: ProtocolParams<ACSSParams, Shutdown, ()>,
+    params: ProtocolParams<RBCParams, Shutdown, ()>,
     additional_params: Option<ACSSSenderParams>,
 }
 
 
-impl Protocol<ACSSParams, ACSSSenderParams, Shutdown, ()> for ACSSSender {
-    fn new(params: ProtocolParams<ACSSParams, Shutdown, ()>) -> Self {
+impl Protocol<RBCParams, ACSSSenderParams, Shutdown, ()> for ACSSSender {
+    fn new(params: ProtocolParams<RBCParams, Shutdown, ()>) -> Self {
         Self { params, additional_params: None }
     }
 
@@ -81,7 +64,7 @@ impl ACSSSender {
         type P = Share;
         // type F = dyn Fn(&B, &P) -> bool;
 
-        let ACSSSenderParams{sc, s} = self.additional_params.take().expect("No additional params given!");
+        let ACSSSenderParams{sc, s, bases} = self.additional_params.take().expect("No additional params given!");
 
         let num_peers = self.params.node.get_num_nodes();
         let node = self.params.node.clone();
@@ -107,7 +90,7 @@ impl ACSSSender {
             let mut coms:Vec<G1Projective> = Vec::with_capacity(num_peers);
             for i in 0..num_peers {
                 let scalars = [f_evals[i], r_evals[i]];
-                coms.push(G1Projective::multi_exp(node.get_pp(), scalars.as_slice())); 
+                coms.push(G1Projective::multi_exp(&bases, scalars.as_slice())); 
             }
 
             // TODO: To double check how this tx_oneshot works
@@ -123,23 +106,24 @@ impl ACSSSender {
 
 #[derive(Clone)]
 pub struct ACSSReceiverParams {
+    pub bases : [G1Projective; 2],
     pub sender: usize,
     pub sc: SharingConfiguration,
 }
 
 impl ACSSReceiverParams {
-    pub fn new(sender: usize, sc: SharingConfiguration) -> Self {
-        Self { sender, sc }
+    pub fn new(sender: usize, sc: SharingConfiguration, bases : [G1Projective; 2]) -> Self {
+        Self { sender, sc, bases }
     }
 }
 
 pub struct ACSSReceiver {
-    params: ProtocolParams<ACSSParams, Shutdown, ACSSDeliver>,
+    params: ProtocolParams<RBCParams, Shutdown, ACSSDeliver>,
     additional_params: Option<ACSSReceiverParams>
 }
 
-impl Protocol<ACSSParams, ACSSReceiverParams, Shutdown, ACSSDeliver> for ACSSReceiver {
-    fn new(params: ProtocolParams<ACSSParams, Shutdown, ACSSDeliver>) -> Self {
+impl Protocol<RBCParams, ACSSReceiverParams, Shutdown, ACSSDeliver> for ACSSReceiver {
+    fn new(params: ProtocolParams<RBCParams, Shutdown, ACSSDeliver>) -> Self {
         Self { params, additional_params: None }
     }
 
@@ -150,7 +134,7 @@ impl Protocol<ACSSParams, ACSSReceiverParams, Shutdown, ACSSDeliver> for ACSSRec
 
 impl ACSSReceiver {
     pub async fn run(&mut self) {
-        let ACSSReceiverParams{sender, ..} = self.additional_params.take().expect("No additional params!");
+        let ACSSReceiverParams{bases, sender, ..} = self.additional_params.take().expect("No additional params!");
         self.params.handle.handle_stats_start(format!("ACSS Receiver {}", sender));
 
         type B = Vec<G1Projective>;
@@ -164,8 +148,7 @@ impl ACSSReceiver {
         let node_clone = self.params.node.clone();
         let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a Vec<G1Projective>, &'b Share) -> bool + Send + Sync>> = Arc::new(Box::new(move |coms, share| {
             let com: G1Projective = coms[node_clone.get_own_idx()];
-            let pp = node_clone.get_pp();
-            let e_com = G1Projective::multi_exp(pp, &share.share);
+            let e_com = G1Projective::multi_exp(&bases, &share.share);
             com.eq(&e_com)
         }));
 
@@ -209,11 +192,14 @@ mod tests {
     async fn test_acss() {
         let mut rng = thread_rng();
         let seed = b"hello";
+        // let pp = ACSSParams::new(n, t);
+        
         let g = G1Projective::generator(); 
         let h = G1Projective::hash_to_curve(seed, DST_PVSS_PUBLIC_PARAMS_GENERATION.as_slice(), b"h");
-        let pp = ACSSParams::new(g, h);
+        let bases = [g, h];
+        let pp = RBCParams::new(16, 6);
         
-        let (nodes, handles) = generate_nodes::<ACSSParams>(10098, 10114, 6, pp.clone());
+        let (nodes, handles) = generate_nodes::<RBCParams>(10098, 10114, 6, pp);
 
         let n = nodes.len();
         let th= n/2;
@@ -225,7 +211,7 @@ mod tests {
 
         let mut rxs = Vec::new();
         for i in 0..n {
-            let add_params = ACSSReceiverParams::new(nodes[0].get_own_idx(), sc.clone());
+            let add_params = ACSSReceiverParams::new(nodes[0].get_own_idx(), sc.clone(), bases);
             let (_, rx) =
                 run_protocol!(ACSSReceiver, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
             // txs.push(tx);
@@ -236,7 +222,7 @@ mod tests {
         let duration = Duration::from_millis(500);
         thread::sleep(duration);
 
-        let params = ACSSSenderParams::new(sc.clone(), s);
+        let params = ACSSSenderParams::new(sc.clone(), s, bases);
         let _ = run_protocol!(ACSSSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 
         // let mut points = Vec::new();
@@ -245,7 +231,7 @@ mod tests {
                 Some(ACSSDeliver { y, coms, .. }) => {
                     assert!(coms.len() == n);
                     let com: G1Projective = coms[nodes[i].get_own_idx()];
-                    let e_com = G1Projective::multi_exp(pp.get_pp(), &y.share);
+                    let e_com = G1Projective::multi_exp(&bases, &y.share);
                     assert!(com.eq(&e_com));
 
                     // TODO: To do the low-degree test.

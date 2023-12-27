@@ -17,7 +17,6 @@ use tokio::sync::oneshot;
 
 use serde::{Serialize, Deserialize};
 use crate::vss::messages::Shutdown;
-use crate::vss::simple_acss::ACSSParams;
 
 pub const NIVSS_HASH_TO_SCALAR_DST: &[u8; 24] = b"NIVSS_HASH_TO_SCALAR_DST";
 
@@ -74,6 +73,18 @@ impl ReadyMsg {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RBCParams {
+    pub n: usize, 
+    pub t: usize,
+}
+
+impl RBCParams {
+    pub fn new(n:usize, t:usize) -> Self {
+        Self { n, t}
+    }
+}
+
 // This would be nicer if it were generic. However, to sensibly do this, one would have to define
 // traits for groups/fields (because e.g., Ark does not use the RustCrypto group, field, etc. traits)
 // which is out of scope.
@@ -89,14 +100,14 @@ impl<B,P> RBCSenderParams<B, P> {
     }
 }
 pub struct RBCSender<B,P> {
-    params: ProtocolParams<ACSSParams, Shutdown, ()>,
+    params: ProtocolParams<RBCParams, Shutdown, ()>,
     additional_params: Option<RBCSenderParams<B,P>>,
 }
 
 
-impl<B,P> Protocol<ACSSParams, RBCSenderParams<B,P>, Shutdown, ()> for RBCSender<B,P> 
+impl<B,P> Protocol<RBCParams, RBCSenderParams<B,P>, Shutdown, ()> for RBCSender<B,P> 
 {
-    fn new(params: ProtocolParams<ACSSParams, Shutdown, ()>) -> Self {
+    fn new(params: ProtocolParams<RBCParams, Shutdown, ()>) -> Self {
         Self { params, additional_params: None }
     }
 
@@ -110,7 +121,7 @@ impl<B,P> RBCSender<B,P>
         B : 'static + Serialize + Clone + Send, 
         P : 'static + Serialize + Clone + Send,
  {
-    pub fn new(params: ProtocolParams<ACSSParams, Shutdown, ()>) -> Self {
+    pub fn new(params: ProtocolParams<RBCParams, Shutdown, ()>) -> Self {
         Self { params, additional_params: None }
     }
 
@@ -165,15 +176,15 @@ pub struct RBCReceiver<B,P,F>
     where
         F: Fn(&B, &P) -> bool + Send + Sync + 'static + ?Sized,
 {
-    params: ProtocolParams<ACSSParams, Shutdown, RBCDeliver<B,P>>,
+    params: ProtocolParams<RBCParams, Shutdown, RBCDeliver<B,P>>,
     additional_params: Option<RBCReceiverParams<B,P,F>>,
 }
 
-impl<B,P,F: ?Sized> Protocol<ACSSParams, RBCReceiverParams<B,P,F>, Shutdown, RBCDeliver<B,P>> for RBCReceiver<B,P,F> 
+impl<B,P,F: ?Sized> Protocol<RBCParams, RBCReceiverParams<B,P,F>, Shutdown, RBCDeliver<B,P>> for RBCReceiver<B,P,F> 
     where
         F: Fn(&B, &P) -> bool + Send + Sync + 'static,
 {
-    fn new(params: ProtocolParams<ACSSParams, Shutdown, RBCDeliver<B,P>>) -> Self {
+    fn new(params: ProtocolParams<RBCParams, Shutdown, RBCDeliver<B,P>>) -> Self {
         Self { params, additional_params: None }
     }
 
@@ -364,11 +375,16 @@ mod tests {
         let seed = b"hello";
         let g = G1Projective::generator(); 
         let h = G1Projective::hash_to_curve(seed, DST_PVSS_PUBLIC_PARAMS_GENERATION.as_slice(), b"h");
-        let pp = ACSSParams::new(g, h);
+
+        let start = 10098;
+        let end = 10114; 
+        let n = end-start;
+        let t = n/2;
+        let pp = RBCParams::new(n, t);
         
         let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a Vec<blstrs::G1Projective>, &'b Scalar) -> bool + Send + Sync>> = Arc::new(Box::new(|a, b| true));
 
-        let (nodes, handles) = generate_nodes::<ACSSParams>(10098, 10114, 2, pp);
+        let (nodes, handles) = generate_nodes::<RBCParams>(10098, 10114, t, pp);
         let n = nodes.len();
 
         // Creating dummy messaages
