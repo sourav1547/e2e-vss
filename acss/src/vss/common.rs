@@ -5,7 +5,9 @@ use group::Group;
 use rand::{distributions::Uniform, prelude::Distribution, thread_rng};
 use serde::{Serialize, Deserialize};
 
-use crate::{evaluation_domain::BatchEvaluationDomain, lagrange::all_lagrange_denominators, random_scalars, fft::fft_assign, pvss::SharingConfiguration};
+use crate::{evaluation_domain::BatchEvaluationDomain, lagrange::all_lagrange_denominators, random_scalars, fft::{fft_assign, fft}, pvss::SharingConfiguration};
+
+use super::keys::InputSecret;
 
 
 /// Return a random scalar within a small range [0,n) 
@@ -87,4 +89,27 @@ pub fn get_dual_code_word<R: rand_core::RngCore + rand_core::CryptoRng>(
         .collect::<Vec<Scalar>>();
 
     vf
+}
+
+pub fn gen_coms_shares(sc: &SharingConfiguration, s: &InputSecret, bases: &[G1Projective; 2]) -> (Vec<G1Projective>, Vec<Share>) {
+    let f = s.get_secret_f();
+    let r = s.get_secret_r();
+
+    let mut f_evals = fft(f, sc.get_evaluation_domain());
+    f_evals.truncate(sc.n);
+
+    let mut r_evals = fft(r, sc.get_evaluation_domain());
+    r_evals.truncate(sc.n);
+
+    let mut shares: Vec<Share> = Vec::with_capacity(sc.n);
+    for i in 0..sc.n {
+        shares.push(Share{share: [f_evals[i], r_evals[i]]});
+    }
+
+    let mut coms:Vec<G1Projective> = Vec::with_capacity(sc.n);
+    for i in 0..sc.n {
+        let scalars = [f_evals[i], r_evals[i]];
+        coms.push(G1Projective::multi_exp(bases, scalars.as_slice())); 
+    }
+    (coms , shares)
 }

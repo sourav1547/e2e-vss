@@ -19,9 +19,8 @@ use tokio::sync::oneshot;
 
 use crate::rbc::{RBCSenderParams, RBCSender, RBCReceiverParams, RBCReceiver, RBCDeliver, RBCParams};
 use crate::vss::keys::InputSecret;
-use crate::fft::fft;
 use crate::pvss::SharingConfiguration;
-use super::common::{Share, low_deg_test};
+use super::common::{Share, low_deg_test, gen_coms_shares};
 use super::messages::*;
 use aptos_crypto::{Signature, Uniform};
 use aptos_crypto::ed25519::{Ed25519PrivateKey, Ed25519Signature, Ed25519PublicKey};
@@ -59,42 +58,18 @@ impl Protocol<RBCParams, LowEdSenderParams, Shutdown, ()> for LowEdSender {
     }
 }
 
+type B = Vec<(usize, Ed25519Signature)>;
+type P = Share;
+type F = Box<dyn Fn(&Vec<(usize, Ed25519Signature)>, &Share) -> bool + Send + Sync>;
+
 impl LowEdSender {
     pub async fn run(&mut self) {
         self.params.handle.handle_stats_start("ACSS Sender");
 
-        
         let LowEdSenderParams{sc, s, bases, vks} = self.additional_params.take().expect("No additional params given!");
 
-        let num_peers = self.params.node.get_num_nodes();
         let node = self.params.node.clone();
-        // let pp = node.get_pp();
-        
-        let (coms, shares) = {
-            // TODO: Use a different thread for faster verification
-            // let _ = thread::spawn(move || {
-            let f = s.get_secret_f();
-            let r = s.get_secret_r();
-
-            let mut f_evals = fft(f, sc.get_evaluation_domain());
-            f_evals.truncate(num_peers);
-
-            let mut r_evals = fft(r, sc.get_evaluation_domain());
-            r_evals.truncate(num_peers);
-
-            let mut shares: Vec<Share> = Vec::with_capacity(num_peers);
-            for i in 0..num_peers {
-                shares.push(Share{share: [f_evals[i], r_evals[i]]});
-            }
-
-            let mut coms:Vec<G1Projective> = Vec::with_capacity(num_peers);
-            for i in 0..num_peers {
-                let scalars = [f_evals[i], r_evals[i]];
-                coms.push(G1Projective::multi_exp(&bases, scalars.as_slice())); 
-            }
-            (coms , shares)
-        };
-
+        let (coms, shares) = gen_coms_shares(&sc, &s, &bases);
         let (tx_oneshot, rx_oneshot) = oneshot::channel();
 
         let coms_clone = coms.clone();
@@ -155,9 +130,6 @@ impl LowEdSender {
                 }
             }
         }
-
-        type B = Vec<(usize, Ed25519Signature)>;
-        type P = Share;
 
         // To update the verify function here.
         let params = RBCSenderParams::new(sigs, shares);
@@ -253,10 +225,6 @@ impl LowEdReceiver {
                 }
             }
         }
-
-        type B = Vec<(usize, Ed25519Signature)>;
-        type P = Share;
-        type F = Box<dyn Fn(&Vec<(usize, Ed25519Signature)>, &Share) -> bool + Send + Sync>;
 
         // let num_peers = self.params.node.get_num_nodes();
         let node = self.params.node.clone();

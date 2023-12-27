@@ -14,6 +14,7 @@ use tokio::select;
 use tokio::sync::oneshot;
 
 use crate::rbc::{RBCSenderParams, RBCSender, RBCReceiverParams, RBCReceiver, RBCDeliver, RBCParams};
+use crate::vss::common::gen_coms_shares;
 use crate::vss::keys::InputSecret;
 
 use crate::fft::fft;
@@ -56,44 +57,17 @@ impl Protocol<RBCParams, YurekSenderParams, Shutdown, ()> for YurekSender {
     }
 }
 
+type B = Vec<G1Projective>;
+type P = Share;
+
 impl YurekSender {
     pub async fn run(&mut self) {
         self.params.handle.handle_stats_start("ACSS Sender");
 
-        type B = Vec<G1Projective>;
-        type P = Share;
-        // type F = dyn Fn(&B, &P) -> bool;
-
         let YurekSenderParams{sc, s, bases, eks} = self.additional_params.take().expect("No additional params given!");
 
-        let num_peers = self.params.node.get_num_nodes();
         let node = self.params.node.clone();
-        // let pp = node.get_pp();
-        
-        let (coms, shares) = {
-            // TODO: Use a different thread for faster verification
-            // let _ = thread::spawn(move || {
-            let f = s.get_secret_f();
-            let r = s.get_secret_r();
-
-            let mut f_evals = fft(f, sc.get_evaluation_domain());
-            f_evals.truncate(num_peers);
-
-            let mut r_evals = fft(r, sc.get_evaluation_domain());
-            r_evals.truncate(num_peers);
-
-            let mut shares: Vec<Share> = Vec::with_capacity(num_peers);
-            for i in 0..num_peers {
-                shares.push(Share{share: [f_evals[i], r_evals[i]]});
-            }
-
-            let mut coms:Vec<G1Projective> = Vec::with_capacity(num_peers);
-            for i in 0..num_peers {
-                let scalars = [f_evals[i], r_evals[i]];
-                coms.push(G1Projective::multi_exp(&bases, scalars.as_slice())); 
-            }
-            (coms , shares)
-        };
+        let (coms, shares) = gen_coms_shares(&sc, &s, &bases);
 
         // TODO:
         // [] Compute all n encryption keys

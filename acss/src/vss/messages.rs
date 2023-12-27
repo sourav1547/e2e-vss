@@ -1,12 +1,10 @@
 use serde::{Deserialize, Serialize};
 use network::tokio::sync::oneshot;
-
-use crate::{G1Projective, Scalar, pvss::SharingConfiguration};
-
-use super::common::{Share, low_deg_test};
+use crate::G1Projective;
+use super::common::Share;
 
 pub struct Shutdown(pub oneshot::Sender<()>);
-use aptos_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature};
+use aptos_crypto::ed25519::Ed25519Signature;
 
 #[derive(Debug)]
 pub struct ACSSDeliver {
