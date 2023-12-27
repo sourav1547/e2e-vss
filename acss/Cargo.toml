@@ -40,6 +40,7 @@ zeroize = { version = "1.3.0", features = ["zeroize_derive"] }
 lazy_static = "1.4.0"
 subtle = "2.4"
 rand_chacha = "0.3"
+sha2 = "0.10.2"
 
 [features]
 assert-private-keys-not-cloneable = []

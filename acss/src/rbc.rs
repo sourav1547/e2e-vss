@@ -1,11 +1,14 @@
 extern crate core;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::marker::PhantomData;
-use std::sync::{Arc, Mutex};
-use blstrs::Scalar;
+use std::sync::Arc;
+use std::thread;
 use network::subscribe_msg;
-use protocol::{Protocol, ProtocolParams, PublicParameters};
+use protocol::{Protocol, ProtocolParams};
 use serde::de::DeserializeOwned;
+
+use sha2::{Digest, Sha256};
+
 use utils::{close_and_drain, shutdown_done};
 use utils::tokio;
 
@@ -15,6 +18,8 @@ use tokio::sync::oneshot;
 use serde::{Serialize, Deserialize};
 use crate::vss::messages::Shutdown;
 use crate::vss::simple_acss::ACSSParams;
+
+pub const NIVSS_HASH_TO_SCALAR_DST: &[u8; 24] = b"NIVSS_HASH_TO_SCALAR_DST";
 
 pub struct RBCDeliver<B,P> {
     pub bmsg: B,
@@ -49,22 +54,22 @@ impl<B,P> SendMsg<B,P> where
 
 #[derive(Serialize, Deserialize)]
 pub struct EchoMsg {
-    pub digest: Scalar, // Hash of the commitment
+    pub digest: [u8; 32], // Hash of the commitment
 }
 
 impl EchoMsg {
-    pub fn new(digest: Scalar) -> Self {
+    pub fn new(digest: [u8; 32]) -> Self {
         Self { digest }
     }
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct ReadyMsg {
-    pub digest: Scalar
+    pub digest: [u8; 32]
 }
 
 impl ReadyMsg {
-    pub fn new(digest: Scalar) -> Self {
+    pub fn new(digest: [u8; 32]) -> Self {
         Self { digest }
     }
 }
@@ -102,8 +107,8 @@ impl<B,P> Protocol<ACSSParams, RBCSenderParams<B,P>, Shutdown, ()> for RBCSender
 
 impl<B,P> RBCSender<B,P> 
     where
-        B : 'static + Serialize + Clone, 
-        P : 'static + Serialize + Clone,
+        B : 'static + Serialize + Clone + Send, 
+        P : 'static + Serialize + Clone + Send,
  {
     pub fn new(params: ProtocolParams<ACSSParams, Shutdown, ()>) -> Self {
         Self { params, additional_params: None }
@@ -114,13 +119,11 @@ impl<B,P> RBCSender<B,P>
 
         let RBCSenderParams{bmsg, pmsg} = self.additional_params.take().expect("No additional params given!");
 
-        // let num_peers = self.params.node.get_num_nodes();
-        // let node = self.params.node.clone();
         let (tx_oneshot, rx_oneshot) = oneshot::channel();
 
-        // let _ = thread::spawn(move || {
-        let _ = tx_oneshot.send((bmsg, pmsg));
-        // });
+        let _ = thread::spawn(move || {
+            let _ = tx_oneshot.send((bmsg, pmsg));
+        });
 
         select! {
             Ok((bmsg, pmsg)) = rx_oneshot => {
@@ -193,16 +196,12 @@ impl<B,P,F> RBCReceiver<B,P,F>
         let mut rx_echo = subscribe_msg!(self.params.handle, &self.params.id, EchoMsg);
         let mut rx_ready = subscribe_msg!(self.params.handle, &self.params.id, ReadyMsg);
 
-        // TODO: 
-        // [] Figure out how to use the networking channels
-        // [] Run the code in AWS setting.
-
-        // let c_to_key = |c: &Scalar| c.to_bytes_be();
-        // let mut c_data: HashMap<[u8; 48], (Vec<G1Projective>, HashMap<usize, Scalar>)> = HashMap::new();
         let mut echo_set = HashSet::new();  // Tracks parties we have received echos from
         let mut ready_sent = false;
         let mut ready_set = HashSet::new();  // Tracks parties we have received readys from
-        // let mut c_count: HashMap<[u8; 48], usize> = HashMap::new();
+        let mut echo_count = HashMap::new();
+        let mut ready_count = HashMap::new();
+
         let mut bmsg= B::default();
         let mut pmsg= P::default();
 
@@ -232,10 +231,13 @@ impl<B,P,F> RBCReceiver<B,P,F>
                             self.params.handle.handle_stats_event("Before send_msg.is_correct");
                             if verify(&bmsg, &pmsg) {
                                 self.params.handle.handle_stats_event("After send_msg.is_correct");
+
+                                let mut hasher = Sha256::new();
+                                hasher.update(bcs::to_bytes(&bmsg).unwrap());
+                                let digest = hasher.finalize().into();
+
                                 // Echo message
                                 for i in 0..self.params.node.get_num_nodes() {
-                                    // TODO: Compute the actual hash
-                                    let digest = Scalar::from(4);
                                     let echo = EchoMsg::new(digest);
                                     self.params.handle.send(i, &self.params.id, &echo).await;
                                 }
@@ -253,23 +255,20 @@ impl<B,P,F> RBCReceiver<B,P,F>
                     if let Ok(echo_msg) = msg.get_content::<EchoMsg>() {
                         if !echo_set.contains(sender_idx) {
                             echo_set.insert(*sender_idx);
-                        }
-                        // let c_key = c_to_key(&digest);
-                        // let count = match c_count.remove(&c_key) {
-                        //     None => 1,
-                        //     Some(x) => x + 1,
-                        // };
-                        // c_count.insert(c_key.clone(), count);
-                        let EchoMsg {digest} = echo_msg;
 
-                        // // Send ready
-                        if echo_set.len() >= 2 * self.params.node.get_threshold() - 1 {
-                            self.params.handle.handle_stats_event("Send ready from echo");
-                                self.send_ready(&mut ready_sent, digest).await;
+                            let EchoMsg {digest} = echo_msg;
+
+                            let count = echo_count.entry(digest).or_insert(0);
+                            *count += 1;
+
+                            // Send ready
+                            if *count >= 2 * self.params.node.get_threshold() - 1 {
+                                self.params.handle.handle_stats_event("Send ready from echo");
+                                    self.send_ready(&mut ready_sent, digest).await;
+                            }
                         }
                     }
                 },
-
 
                 Some(msg) = rx_ready.recv() => {
                     // Get sender
@@ -280,13 +279,17 @@ impl<B,P,F> RBCReceiver<B,P,F>
                             ready_set.insert(*sender_idx);
                             let ReadyMsg {digest} = ready_msg;
 
-                            // Ready amplification
-                            if ready_set.len() >= self.params.node.get_threshold() {
+                            let count = ready_count.entry(digest).or_insert(0);
+                            *count += 1;
+
+                            // Ready amplication
+                            if *count >= self.params.node.get_threshold() {
                                 self.params.handle.handle_stats_event("Send ready from ready");
                                 self.send_ready(&mut ready_sent, digest).await;
                             }
-                                                    // // Send ready
-                            if ready_set.len() >= 2 * self.params.node.get_threshold() - 1 {
+
+                            // Deliver and Terminate
+                            if *count >= 2 * self.params.node.get_threshold() - 1 {
                                 // TODO: Check if the node already received coms from the sender or not before returning ACSSDeliver
                                 self.params.handle.unsubscribe::<ReadyMsg>(&self.params.id).await;
 
@@ -315,7 +318,6 @@ impl<B,P,F> RBCReceiver<B,P,F>
                                 self.params.handle.handle_stats_end().await;
 
                                 return;
-                                
                             }
                         }
                     }
@@ -324,7 +326,7 @@ impl<B,P,F> RBCReceiver<B,P,F>
         }
     }
 
-    async fn send_ready(&mut self, ready_sent: &mut bool, digest: Scalar) {
+    async fn send_ready(&mut self, ready_sent: &mut bool, digest: [u8; 32]) {
         if !*ready_sent {
             *ready_sent = true;
             let ready = ReadyMsg::new(digest.clone());
