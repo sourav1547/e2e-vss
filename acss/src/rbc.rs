@@ -186,7 +186,7 @@ impl<B,P,F> RBCReceiver<B,P,F>
         F: Fn(&B, &P) -> bool + Send + Sync + 'static,
  {
     pub async fn run(&mut self) {
-        let RBCReceiverParams{sender, verify, phantom_b, phantom_p } = self.additional_params.take().expect("No additional params!");
+        let RBCReceiverParams{sender, verify, ..} = self.additional_params.take().expect("No additional params!");
         self.params.handle.handle_stats_start(format!("ACSS Receiver {}", sender));
 
         let mut rx_send = subscribe_msg!(self.params.handle, &self.params.id, SendMsg<B,P>);
@@ -230,7 +230,7 @@ impl<B,P,F> RBCReceiver<B,P,F>
                             pmsg = send_msg.pmsg;
 
                             self.params.handle.handle_stats_event("Before send_msg.is_correct");
-                            if true {
+                            if verify(&bmsg, &pmsg) {
                                 self.params.handle.handle_stats_event("After send_msg.is_correct");
                                 // Echo message
                                 for i in 0..self.params.node.get_num_nodes() {

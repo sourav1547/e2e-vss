@@ -169,7 +169,7 @@ impl ACSSReceiver {
             com.eq(&e_com)
         }));
 
-        let add_params = RBCReceiverParams::new(node.get_own_idx(), verify);
+        let add_params = RBCReceiverParams::new(sender, verify);
         let (_, mut rx) = run_protocol!(RBCReceiver<B, P, F>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), add_params);
 
         match rx.recv().await {
