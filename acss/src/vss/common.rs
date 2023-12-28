@@ -7,9 +7,9 @@ use rand::{distributions, prelude::Distribution, thread_rng, rngs::StdRng};
 use rand_core::SeedableRng;
 use serde::{Serialize, Deserialize};
 
-use crate::{evaluation_domain::BatchEvaluationDomain, lagrange::all_lagrange_denominators, random_scalars, fft::{fft_assign, fft}, pvss::SharingConfiguration};
+use crate::{evaluation_domain::BatchEvaluationDomain, lagrange::all_lagrange_denominators, random_scalars, fft::{fft_assign, fft}, pvss::SharingConfiguration, vss::ni_vss::dealing::create_dealing};
 
-use super::keys::InputSecret;
+use super::{keys::InputSecret, ni_vss::{encryption::CiphertextChunks, nizk_chunking::ProofChunking, nizk_sharing::ProofSharing}};
 
 
 /// Return a random scalar within a small range [0,n) 
@@ -140,4 +140,37 @@ pub fn generate_bls_sig_keys(n: usize) -> Vec<KeyPair<PrivateKey, PublicKey>> {
     (0..n)
         .map(|_| KeyPair::<PrivateKey, PublicKey>::generate(&mut rng))
         .collect()
+}
+
+pub fn groth_deal(sc: &SharingConfiguration, bases: &[G1Projective; 2], enc_keys: &[G1Projective], s: &InputSecret)
+-> (Vec<G1Projective>, CiphertextChunks, G1Projective, Vec<G1Projective>, ProofChunking, ProofSharing)
+{
+    assert_eq!(s.get_secret_f().len(), sc.t);
+    assert_eq!(s.get_secret_r().len(), sc.t);
+
+    let f = s.get_secret_f();
+    let r = s.get_secret_r();
+
+    let mut f_evals = fft(f, sc.get_evaluation_domain());
+    f_evals.truncate(sc.n);
+
+    let mut r_evals = fft(r, sc.get_evaluation_domain());
+    r_evals.truncate(sc.n);
+
+    let mut shares: Vec<Share> = Vec::with_capacity(sc.n);
+    for i in 0..sc.n {
+        shares.push(Share{share: [f_evals[i], r_evals[i]]});
+    }
+
+    let mut coms:Vec<G1Projective> = Vec::with_capacity(sc.n);
+    for i in 0..sc.n {
+        let scalars = [f_evals[i], r_evals[i]];
+        coms.push(G1Projective::multi_exp(bases, scalars.as_slice())); 
+    }
+
+    let h = bases[1];
+    let (ctxt, r_bb, enc_rr, enc_pf, sh_pf) = create_dealing(&h, &coms, enc_keys, &f_evals, &r_evals);
+    
+    (coms, ctxt, r_bb, enc_rr, enc_pf, sh_pf)
+    
 }

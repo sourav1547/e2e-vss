@@ -4,6 +4,7 @@
 use crate::{util, hash_to_scalar, random_scalar};
 use group::Group;
 use rand::thread_rng;
+use serde::{Serialize, Deserialize};
 use std::{vec::Vec, ops::{Mul, Add}};
 use blstrs::{G1Projective, Scalar};
 use crate::vss::ni_vss::chunking::NUM_CHUNKS;
@@ -44,7 +45,7 @@ impl SharingWitness {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct ProofSharing {
     ff: G1Projective,
     aa: G1Projective,

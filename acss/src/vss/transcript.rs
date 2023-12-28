@@ -12,30 +12,18 @@ use super::ni_vss::nizk_sharing::ProofSharing;
 
 #[derive(Clone, Serialize, Deserialize, Default)]
 #[allow(non_snake_case)]
+// NOTE: We are omitting sending the coms a part of the transcript again as the 
+// the dealer already sent it as part of ShareMsg
 pub struct TranscriptBLS {
-    /// Pedersen commitment to the polynomial
-    coms: Vec<G1Projective>,
-    /// Shares of those who did not sign
-    shares: Vec<Scalar>,
-    /// Pedersen commitment randomness of those who did not sign
-    randomness: Vec<Scalar>,
-    /// Multisignature from the set of nodes who received valid shares
-    agg_sig : AggregateSignature,
+    shares: Vec<Scalar>, // Shares of those who did not sign
+    randomness: Vec<Scalar>, // Pedersen commitment randomness of those who did not sign
+    agg_sig : AggregateSignature, // Multisignature from the set of nodes who received valid shares
 }
 
 
 impl TranscriptBLS {
-    pub fn new(coms:Vec<G1Projective>, shares:Vec<Scalar>, randomness:Vec<Scalar>, agg_sig: AggregateSignature) -> Self {
-        Self {
-            coms: coms,
-            shares: shares,
-            randomness: randomness,
-            agg_sig: agg_sig,
-        }
-    }
-
-    pub fn coms(&self) -> &Vec<G1Projective> {
-        &self.coms
+    pub fn new(shares:Vec<Scalar>, randomness:Vec<Scalar>, agg_sig: AggregateSignature) -> Self {
+        Self { shares, randomness, agg_sig }
     }
 
     pub fn shares(&self) -> &Vec<Scalar> {
@@ -57,29 +45,17 @@ impl TranscriptBLS {
 
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Clone, Default)]
+// NOTE: We are omitting sending the coms a part of the transcript again as the 
+// the dealer already sent it as part of ShareMsg
 pub struct TranscriptEd {
-    /// Pedersen commitment to the polynomial
-    coms: Vec<G1Projective>,
-    /// Shares of those who did not sign
-    shares: Vec<Scalar>,
-    /// Pedersen commitment randomness of those who did not sign
-    randomness: Vec<Scalar>,
-    /// Multisignature from the set of nodes who received valid shares
-    agg_sig : EdSignature,
+    shares: Vec<Scalar>, // Shares of those who did not sign
+    randomness: Vec<Scalar>, // Pedersen commitment randomness of those who did not sign
+    agg_sig : EdSignature, // Multisignature from the set of nodes who received valid shares
 }
 
 impl TranscriptEd {
-    pub fn new(coms:Vec<G1Projective>, shares:Vec<Scalar>, randomness:Vec<Scalar>, agg_sig: EdSignature) -> Self {
-        Self {
-            coms: coms,
-            shares: shares,
-            randomness: randomness,
-            agg_sig: agg_sig,
-        }
-    }
-
-    pub fn coms(&self) -> &Vec<G1Projective> {
-        &self.coms
+    pub fn new(shares:Vec<Scalar>, randomness:Vec<Scalar>, agg_sig: EdSignature) -> Self {
+        Self { shares, randomness, agg_sig }
     }
 
     pub fn shares(&self) -> &Vec<Scalar> {
@@ -96,24 +72,17 @@ impl TranscriptEd {
 }
 
 #[allow(non_snake_case)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct TranscriptMixed {
-    /// Pedersen commitment to the polynomial
     coms: Vec<G1Projective>,
-    /// Shares of those who did not sign
     shares: Vec<Scalar>,
-    /// Pedersen commitment randomness of those who did not sign
     randomness: Vec<Scalar>,
-    /// Multisignature from the set of nodes who received valid shares
     agg_sig : AggregateSignature,
-    /// Chunkciphertext of the remaining parties
-    pub(crate) ciphertext: CiphertextChunks,
-    /// NIZK proof of correct encryption
-    pub(crate) chunk_pf: ProofChunking,
-    /// ElGamal Encryption of h^r
-    pub(crate) r_bb : G1Projective, 
-    pub(crate) enc_rr: Vec<G1Projective>, 
-    /// NIZK proof of correct sharing
-    pub(crate) share_pf: ProofSharing,
+    pub(crate) ciphertext: CiphertextChunks, // Chunkciphertext of the remaining parties
+    pub(crate) chunk_pf: ProofChunking, // NIZK proof of correct encryption
+    pub(crate) r_bb : G1Projective,  // ElGamal Encryption of h^r
+    pub(crate) enc_rr: Vec<G1Projective>,
+    pub(crate) share_pf: ProofSharing, // NIZK proof of correct sharing
 }
 
 impl TranscriptMixed {
@@ -175,24 +144,17 @@ impl TranscriptMixed {
     
 }
 
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct TranscriptMixedEd {
-    /// Pedersen commitment to the polynomial
     coms: Vec<G1Projective>,
-    /// Shares of those who did not sign
     shares: Vec<Scalar>,
-    /// Pedersen commitment randomness of those who did not sign
     randomness: Vec<Scalar>,
-    /// Multisignature from the set of nodes who received valid shares
     agg_sig : EdSignature,
-    /// Chunkciphertext of the remaining parties
-    pub(crate) ciphertext: CiphertextChunks,
-    /// NIZK proof of correct encryption
-    pub(crate) chunk_pf: ProofChunking,
-    /// ElGamal Encryption of h^r
-    pub(crate) r_bb : G1Projective, 
+    pub(crate) ciphertext: CiphertextChunks, // Chunkciphertext of the remaining parties
+    pub(crate) chunk_pf: ProofChunking, // NIZK proof of correct encryption
+    pub(crate) r_bb : G1Projective, // ElGamal Encryption of h^r
     pub(crate) enc_rr: Vec<G1Projective>, 
-    /// NIZK proof of correct sharing
-    pub(crate) share_pf: ProofSharing,
+    pub(crate) share_pf: ProofSharing, // NIZK proof of correct sharing
 }
 
 impl TranscriptMixedEd {

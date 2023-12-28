@@ -2,6 +2,7 @@
 use blstrs::{G1Projective, Scalar};
 use group::Group;
 use rand::thread_rng;
+use serde::{Serialize, Deserialize};
 use std::ops::Mul;
 use crate::{random_scalars, vss::ni_vss::chunking::CHUNK_SIZE};
 use self::crypto::PlaintextChunks;
@@ -16,6 +17,7 @@ mod crypto {
     pub use crate::vss::ni_vss::chunking::PlaintextChunks;
 }
 
+#[derive(Serialize, Deserialize, Default)]
 pub struct CiphertextChunks {
     pub(crate) rr: Vec<G1Projective>,
     pub(crate) cc: Vec<[G1Projective; NUM_CHUNKS]>,

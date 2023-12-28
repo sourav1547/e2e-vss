@@ -12,6 +12,7 @@ use rand::prelude::Distribution;
 use rand_chacha::ChaCha20Rng;
 use rand_chacha::rand_core::{SeedableRng, RngCore as CRngCore};
 use rand::{Rng, thread_rng};
+use serde::{Serialize, Deserialize};
  
 use super::encryption::CiphertextChunks;
 use super::fiat_shamir::NIVSS_DOM_SEP;
@@ -62,7 +63,7 @@ pub enum ZkProofChunkingError {
 
 
 /// Zero-knowledge proof of chunking.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct ProofChunking {
     y0: G1Projective,
     bb: Vec<G1Projective>,

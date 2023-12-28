@@ -1,47 +1,58 @@
 extern crate core;
 
 use std::sync::Arc;
-use blstrs::G1Projective;
-use protocol::{Protocol, ProtocolParams, run_protocol};
-use utils::tokio;
+use std::thread;
+
+use blstrs::{G1Projective, Scalar};
+use network::subscribe_msg;
+use protocol::{Protocol, ProtocolParams, PublicParameters, run_protocol};
+use utils::tokio::sync::mpsc;
+use utils::{close_and_drain, shutdown_done, spawn_blocking};
+use utils::{rayon, tokio};
+
+use tokio::select;
+use tokio::sync::oneshot;
 
 use crate::rbc::{RBCSenderParams, RBCSender, RBCReceiverParams, RBCReceiver, RBCDeliver, RBCParams};
 use crate::vss::common::gen_coms_shares;
 use crate::vss::keys::InputSecret;
+
+use crate::fft::fft;
 use crate::pvss::SharingConfiguration;
 
-use super::common::Share;
+use super::common::{Share, groth_deal};
 use super::messages::*;
+use serde::{Serialize, Deserialize};
 
 
 // This would be nicer if it were generic. However, to sensibly do this, one would have to define
 // traits for groups/fields (because e.g., Ark does not use the RustCrypto group, field, etc. traits)
 // which is out of scope.
 #[derive(Clone)]
-pub struct YurekSenderParams {
+pub struct GrothSenderParams {
     pub bases: [G1Projective; 2],
     pub eks: Vec<G1Projective>,
     pub sc: SharingConfiguration, 
     pub s: InputSecret,
 }
 
-impl YurekSenderParams {
+impl GrothSenderParams {
     pub fn new(sc: SharingConfiguration, s: InputSecret, bases: [G1Projective; 2], eks: Vec<G1Projective>) -> Self {
         Self { sc, s, bases, eks }
     }
 }
-pub struct YurekSender {
+pub struct GrothSender {
     params: ProtocolParams<RBCParams, Shutdown, ()>,
-    additional_params: Option<YurekSenderParams>,
+    additional_params: Option<GrothSenderParams>,
 }
 
 
-impl Protocol<RBCParams, YurekSenderParams, Shutdown, ()> for YurekSender {
+impl Protocol<RBCParams, GrothSenderParams, Shutdown, ()> for GrothSender {
     fn new(params: ProtocolParams<RBCParams, Shutdown, ()>) -> Self {
         Self { params, additional_params: None }
     }
 
-    fn additional_params(&mut self, params: YurekSenderParams) {
+    fn additional_params(&mut self, params: GrothSenderParams) {
         self.additional_params = Some(params);
     }
 }
@@ -49,14 +60,14 @@ impl Protocol<RBCParams, YurekSenderParams, Shutdown, ()> for YurekSender {
 type B = Vec<G1Projective>;
 type P = Share;
 
-impl YurekSender {
+impl GrothSender {
     pub async fn run(&mut self) {
         self.params.handle.handle_stats_start("ACSS Sender");
 
-        let YurekSenderParams{sc, s, bases, eks} = self.additional_params.take().expect("No additional params given!");
+        let GrothSenderParams{sc, s, bases, eks} = self.additional_params.take().expect("No additional params given!");
 
         let node = self.params.node.clone();
-        let (coms, shares) = gen_coms_shares(&sc, &s, &bases);
+        let (coms, ctxt, r_bb, enc_rr, enc_pf, sh_pf) = groth_deal(&sc, &bases, &eks, &s);
 
         // TODO:
         // [] Compute all n encryption keys
@@ -139,19 +150,22 @@ impl YurekReceiver {
 
 #[cfg(test)]
 mod tests {
-    use std::thread;
     use std::time::Duration;
 
+    use blstrs::Scalar;
+    use ff::Field;
     use group::Group;
     use rand::thread_rng;
+    use crypto::interpolate_at;
     use network::message::Id;
     use protocol::run_protocol;
     use protocol::tests::generate_nodes;
-    use utils::tokio;
+    use utils::{shutdown, tokio};
     use crate::DST_PVSS_PUBLIC_PARAMS_GENERATION;
     use crate::pvss::SharingConfiguration;
     use crate::vss::keys::InputSecret;
     use crate::vss::messages::ACSSDeliver;
+    use crate::vss::simple_acss::{ACSSSender, ACSSReceiverParams, ACSSReceiver};
 
     use super::*;
 
@@ -178,9 +192,9 @@ mod tests {
 
         let mut rxs = Vec::new();
         for i in 0..n {
-            let add_params = YurekReceiverParams::new(nodes[0].get_own_idx(), sc.clone(), bases);
+            let add_params = ACSSReceiverParams::new(nodes[0].get_own_idx(), sc.clone(), bases);
             let (_, rx) =
-                run_protocol!(YurekReceiver, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
+                run_protocol!(ACSSReceiver, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
             // txs.push(tx);
             rxs.push(rx);
         }

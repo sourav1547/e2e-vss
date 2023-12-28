@@ -80,7 +80,7 @@ pub fn get_transcript(shares: &Vec<Share>, coms: &Vec<G1Projective>, signers: &V
         }
     }
 
-    TranscriptBLS::new(coms.clone(), m_shares, m_randomness, agg_sig)
+    TranscriptBLS::new(m_shares, m_randomness, agg_sig)
 }
 
 // Takes as input a vector of boolean indicating which signers are set
