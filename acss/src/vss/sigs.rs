@@ -153,6 +153,6 @@ impl EdSignature {
     pub fn verify(&self, msg: &[u8], pk: &MultiEd25519PublicKey) -> bool {
         let sig = self.sig.clone().unwrap();
         let valid = sig.verify_arbitrary_msg(&msg, &pk).is_ok();
-        return valid;
+        valid
     }
 }

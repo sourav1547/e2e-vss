@@ -1,5 +1,5 @@
 extern crate core;
-
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::thread;
 
@@ -173,7 +173,7 @@ impl LowEdSender {
         // Handling ack messages
         let public_keys = vks.public_keys();
         let mut signers = vec![false; sc.n];
-        let mut sigs = Vec::with_capacity(sc.t);
+        let mut sig_map: HashMap<usize, Ed25519Signature> = HashMap::new();
         
         // Computing the commitment digest
         let mut hasher = Sha256::new();
@@ -189,9 +189,9 @@ impl LowEdSender {
                     if let Ok(ack_msg) = msg.get_content::<AckMsg>() {
                         if ack_msg.sig.verify_arbitrary_msg(root.as_slice(), &public_keys[sender]).is_ok() {       
                             signers[sender] = true;
-                            sigs.push(ack_msg.sig);
+                            sig_map.insert(sender, ack_msg.sig);
                             
-                            if sigs.len() >= sc.t {
+                            if sig_map.len() >= sc.t {
                                 self.params.handle.unsubscribe::<AckMsg>(&self.params.id).await;
                                 close_and_drain!(rx_ack);
                                 self.params.handle.handle_stats_event("Enough sigs collected");
@@ -203,7 +203,16 @@ impl LowEdSender {
             }
         }
 
+        let mut sigs = Vec::new();
+        for idx in 0..sc.n {
+            if sig_map.contains_key(&idx) {
+                sigs.push(sig_map.get(&idx).unwrap().clone())
+            }
+        }
+
         let t = get_transcript(&shares, &coms, &signers, sigs);
+        assert!(t.agg_sig().verify(root.as_slice(), &vks));
+
         let params = RBCSenderParams::new(t, shares);
         let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), params);
 
@@ -331,7 +340,7 @@ mod tests {
         let mut rng = thread_rng();
         let seed = b"hello";
         
-        let th: usize = 1;
+        let th: usize = 4;
         let deg = 2*th;
         let n = 3*th + 1;
         let start: u16 = 10098;
