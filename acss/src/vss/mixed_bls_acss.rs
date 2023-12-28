@@ -7,14 +7,19 @@ use aptos_bitvec::BitVec;
 use blstrs::G1Projective;
 use network::subscribe_msg;
 use protocol::{Protocol, ProtocolParams,run_protocol};
+use serde::{Serialize, Deserialize};
 use sha2::{Digest, Sha256};
 use utils::{close_and_drain, shutdown_done};
 use utils::tokio;
 use tokio::select;
 use tokio::sync::oneshot;
 use aptos_crypto::Signature;
-use aptos_crypto::ed25519::{Ed25519PrivateKey, Ed25519Signature};
-use aptos_crypto::multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature};
+use aptos_crypto::{
+    bls12381,
+    bls12381::{PrivateKey, PublicKey}, 
+    SigningKey
+};
+
 
 use crate::rbc::{RBCSenderParams, RBCSender, RBCReceiverParams, RBCReceiver, RBCDeliver, RBCParams};
 use crate::vss::common::share_verify;
@@ -23,52 +28,64 @@ use crate::pvss::SharingConfiguration;
 use crate::vss::ni_vss::dealing::{create_dealing, verify_dealing};
 use super::common::{Share, gen_coms_shares};
 use super::messages::*;
-use super::sigs::EdSignature;
-use super::transcript::TranscriptMixedEd;
+use super::sigs::AggregateSignature;
+use super::transcript::TranscriptMixedBLS;
 
 // This would be nicer if it were generic. However, to sensibly do this, one would have to define
 // traits for groups/fields (because e.g., Ark does not use the RustCrypto group, field, etc. traits)
 // which is out of scope.
 #[derive(Clone)]
-pub struct MixedEdSenderParams {
+pub struct MixedBLSSenderParams {
     pub bases: [G1Projective; 2],
-    pub vks : MultiEd25519PublicKey,
+    pub vks : Vec<PublicKey>,
     pub eks: Vec<G1Projective>,
     pub sc: SharingConfiguration, 
     pub s: InputSecret,
 }
 
-impl MixedEdSenderParams {
-    pub fn new(bases: [G1Projective; 2], vks: MultiEd25519PublicKey, eks: Vec<G1Projective>, sc: SharingConfiguration, s: InputSecret) -> Self {
+impl MixedBLSSenderParams {
+    pub fn new(bases: [G1Projective; 2], vks: Vec<PublicKey>, eks: Vec<G1Projective>, sc: SharingConfiguration, s: InputSecret) -> Self {
         Self { bases, vks, eks, sc, s }
     }
 }
-pub struct MixedEdSender {
+pub struct MixedBLSSender {
     params: ProtocolParams<RBCParams, Shutdown, ()>,
-    additional_params: Option<MixedEdSenderParams>,
+    additional_params: Option<MixedBLSSenderParams>,
 }
 
 
-impl Protocol<RBCParams, MixedEdSenderParams, Shutdown, ()> for MixedEdSender {
+impl Protocol<RBCParams, MixedBLSSenderParams, Shutdown, ()> for MixedBLSSender {
     fn new(params: ProtocolParams<RBCParams, Shutdown, ()>) -> Self {
         Self { params, additional_params: None }
     }
 
-    fn additional_params(&mut self, params: MixedEdSenderParams) {
+    fn additional_params(&mut self, params: MixedBLSSenderParams) {
         self.additional_params = Some(params);
     }
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct AckMsg {
+    pub sig: bls12381::Signature,
+}
+
+impl AckMsg {
+    pub fn new(sig: bls12381::Signature) -> Self {
+        Self {sig}
+    }
+}
+
+
 // type B = Vec<(usize, Ed25519Signature)>;
-type B = TranscriptMixedEd;
+type B = TranscriptMixedBLS;
 type P = Share;
-type F = Box<dyn Fn(&TranscriptMixedEd, &Share) -> bool + Send + Sync>;
+type F = Box<dyn Fn(&TranscriptMixedBLS, &Share) -> bool + Send + Sync>;
 
 // This function outputs the Mixed-VSS transcript. 
 // This function assumes that all signatures are valid
 // This function outputs the Mixed-VSS transcript. 
 // This function assumes that all signatures are valid
-pub fn get_transcript(coms: &Vec<G1Projective>, shares: &Vec<Share>, signers: &Vec<bool>, sigs: &Vec<Ed25519Signature>, params: &MixedEdSenderParams, th: usize) -> TranscriptMixedEd {
+pub fn get_transcript(coms: &Vec<G1Projective>, shares: &Vec<Share>, signers: &Vec<bool>, sigs: &Vec<bls12381::Signature>, params: &MixedBLSSenderParams, th: usize) -> TranscriptMixedBLS {
     
     assert!(sigs.len() >= 2*th+1);
     let deg = params.sc.get_threshold() -1;
@@ -109,25 +126,15 @@ pub fn get_transcript(coms: &Vec<G1Projective>, shares: &Vec<Share>, signers: &V
     let h = params.bases[1];
     let (ciphertext, r_bb, enc_rr, chunk_pf, share_pf) = create_dealing(&h, &enc_commits, &enc_pks, &enc_shares, &enc_randomness);
     
-    TranscriptMixedEd::new(coms.clone(), reveal_shares, reveal_randomness, agg_sig, ciphertext, chunk_pf, r_bb, enc_rr, share_pf)
+    TranscriptMixedBLS::new(coms.clone(), reveal_shares, reveal_randomness, agg_sig, ciphertext, chunk_pf, r_bb, enc_rr, share_pf)
 }
-
 
 // Takes as input a vector of boolean indicating which signers are set
-pub fn aggregate_sig(signers: Vec<bool>, sigs: Vec<Ed25519Signature>) -> EdSignature {
-    let mut indices: Vec<usize> = Vec::with_capacity(sigs.len());
-    for i in 0..signers.len() {
-        if signers[i] {
-            indices.push(i);
-        }
-    }
-
-    let new_sigs = sigs.iter().zip(indices.iter()).map(|(s, &i)| (s.clone(),i)).collect::<Vec<(Ed25519Signature,usize)>>();
-    let mt_sig = MultiEd25519Signature::new(new_sigs);
-    EdSignature::new(BitVec::from(signers), Some(mt_sig.unwrap()))
+pub fn aggregate_sig(signers: Vec<bool>, sigs: Vec<bls12381::Signature>) -> AggregateSignature {
+    AggregateSignature::new(BitVec::from(signers), Some(bls12381::Signature::aggregate(sigs).unwrap()))
 }
 
-pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptMixedEd, params: &MixedEdReceiverParams) -> bool {
+pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptMixedBLS, params: &MixedBLSReceiverParams) -> bool {
 //  sc: &SharingConfiguration, pp: &PublicParameters, pk: &MultiEd25519PublicKey, pub_keys: &Vec<G1Projective>) -> bool {
     let n = coms.len();
     let num_signed = t.agg_sig().get_num_voters();
@@ -143,7 +150,9 @@ pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptMixedEd, params
     let mut hasher = Sha256::new();
     hasher.update(bcs::to_bytes(coms).unwrap());
     let root: [u8; 32] = hasher.finalize().into();
-    assert!(t.agg_sig().verify(root.as_slice(), &params.mpk));
+
+    let mpk = params.mpk.iter().map(|x| x).collect::<Vec<&PublicKey>>();
+    assert!(t.agg_sig().verify(root.as_slice(), &mpk));
 
     // Encryption keys of nodes whose shares are not opened
     let mut enc_coms = Vec::with_capacity(enc_count);
@@ -176,13 +185,13 @@ pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptMixedEd, params
     true
 }
 
-impl MixedEdSender {
+impl MixedBLSSender {
     pub async fn run(&mut self) {
         self.params.handle.handle_stats_start("ACSS Sender");
         let th = self.params.node.get_threshold();
         let mut rx_ack = subscribe_msg!(self.params.handle, &self.params.id, AckMsg);
 
-        let MixedEdSenderParams{bases, vks, eks, sc, s} = self.additional_params.take().expect("No additional params given!");
+        let MixedBLSSenderParams{bases, vks, eks, sc, s} = self.additional_params.take().expect("No additional params given!");
         let node = self.params.node.clone();
         let (coms, shares) = gen_coms_shares(&sc, &s, &bases);
         let (tx_oneshot, rx_oneshot) = oneshot::channel();
@@ -208,9 +217,8 @@ impl MixedEdSender {
         }
 
         // Handling ack messages
-        let public_keys = vks.public_keys();
         let mut signers = vec![false; sc.n];
-        let mut sig_map: HashMap<usize, Ed25519Signature> = HashMap::new();
+        let mut sig_map: HashMap<usize, bls12381::Signature> = HashMap::new();
         
         // Computing the commitment digest
         let mut hasher = Sha256::new();
@@ -224,7 +232,7 @@ impl MixedEdSender {
                     if signers[sender] {continue}
 
                     if let Ok(ack_msg) = msg.get_content::<AckMsg>() {
-                        if ack_msg.sig.verify_arbitrary_msg(root.as_slice(), &public_keys[sender]).is_ok() {       
+                        if ack_msg.sig.verify_arbitrary_msg(root.as_slice(), &vks[sender]).is_ok() {        
                             signers[sender] = true;
                             sig_map.insert(sender, ack_msg.sig);
                             
@@ -247,7 +255,7 @@ impl MixedEdSender {
             }
         }
 
-        let params = MixedEdSenderParams { bases, vks, eks, sc, s };
+        let params = MixedBLSSenderParams { bases, vks, eks, sc, s };
         let t = get_transcript(&coms,&shares, &signers, &sigs, &params, th);
 
         let rbc_params = RBCSenderParams::new(t, shares);
@@ -257,39 +265,39 @@ impl MixedEdSender {
 }
 
 #[derive(Clone)]
-pub struct MixedEdReceiverParams {
+pub struct MixedBLSReceiverParams {
     pub bases : [G1Projective; 2],
-    pub mpk : MultiEd25519PublicKey,
+    pub mpk : Vec<PublicKey>,
     pub eks: Vec<G1Projective>,
-    pub sk : Ed25519PrivateKey,
+    pub sk : PrivateKey,
     pub sender: usize,
     pub sc: SharingConfiguration,
 }
 
-impl MixedEdReceiverParams {
-    pub fn new(bases: [G1Projective;2], mpk: MultiEd25519PublicKey, eks: Vec<G1Projective>, sk: Ed25519PrivateKey, sender: usize, sc: SharingConfiguration) -> Self {
+impl MixedBLSReceiverParams {
+    pub fn new(bases: [G1Projective;2], mpk: Vec<PublicKey>, eks: Vec<G1Projective>, sk: PrivateKey, sender: usize, sc: SharingConfiguration) -> Self {
         Self { bases, mpk, eks, sk, sender, sc }
     }
 }
 
-pub struct MixedEdReceiver {
+pub struct MixedBLSReceiver {
     params: ProtocolParams<RBCParams, Shutdown, ACSSDeliver>,
-    additional_params: Option<MixedEdReceiverParams>
+    additional_params: Option<MixedBLSReceiverParams>
 }
 
-impl Protocol<RBCParams, MixedEdReceiverParams, Shutdown, ACSSDeliver> for MixedEdReceiver {
+impl Protocol<RBCParams, MixedBLSReceiverParams, Shutdown, ACSSDeliver> for MixedBLSReceiver {
     fn new(params: ProtocolParams<RBCParams, Shutdown, ACSSDeliver>) -> Self {
         Self { params, additional_params: None }
     }
 
-    fn additional_params(&mut self, params: MixedEdReceiverParams) {
+    fn additional_params(&mut self, params: MixedBLSReceiverParams) {
         self.additional_params = Some(params)
     }
 }
 
-impl MixedEdReceiver {
+impl MixedBLSReceiver {
     pub async fn run(&mut self) {
-        let MixedEdReceiverParams{bases, mpk, eks, sk, sender, sc} = self.additional_params.take().expect("No additional params!");
+        let MixedBLSReceiverParams{bases, mpk, eks, sk, sender, sc} = self.additional_params.take().expect("No additional params!");
         self.params.handle.handle_stats_start(format!("ACSS Receiver {}", sender));
         
         let mut rx_share = subscribe_msg!(self.params.handle, &self.params.id, ShareMsg);
@@ -335,8 +343,8 @@ impl MixedEdReceiver {
         // let num_peers = self.params.node.get_num_nodes();
         let node = self.params.node.clone();
         let coms_clone = coms.clone();
-        let params = MixedEdReceiverParams{bases, mpk, eks, sk, sender, sc};
-        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a TranscriptMixedEd, &'b Share) -> bool + Send + Sync>> = Arc::new(Box::new(move |t, share| {
+        let params = MixedBLSReceiverParams{bases, mpk, eks, sk, sender, sc};
+        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a TranscriptMixedBLS, &'b Share) -> bool + Send + Sync>> = Arc::new(Box::new(move |t, share| {
             verify_transcript(&coms_clone, t, &params)
         }));
 
@@ -360,7 +368,6 @@ mod tests {
     use std::thread;
     use std::time::Duration;
 
-    use aptos_crypto::ed25519::Ed25519PublicKey;
     use group::Group;
     use rand::thread_rng;
     use network::message::Id;
@@ -369,7 +376,7 @@ mod tests {
     use utils::tokio;
     use crate::{DST_PVSS_PUBLIC_PARAMS_GENERATION, random_scalars};
     use crate::pvss::SharingConfiguration;
-    use crate::vss::common::{generate_ed_sig_keys, low_deg_test};
+    use crate::vss::common::{low_deg_test, generate_bls_sig_keys};
     use crate::vss::keys::InputSecret;
     use crate::vss::messages::ACSSDeliver;
     use super::*;
@@ -397,9 +404,8 @@ mod tests {
         let sc = SharingConfiguration::new(deg+1, n);
         let s = InputSecret::new_random(&sc, true, &mut rng);
 
-        let keys = generate_ed_sig_keys(n);
-        let ver_keys = keys.iter().map(|x| x.public_key.clone()).collect::<Vec<Ed25519PublicKey>>();
-        let mpk = MultiEd25519PublicKey::new(ver_keys, deg+1).unwrap();
+        let keys = generate_bls_sig_keys(n);
+        let vkeys = keys.iter().map(|x| x.public_key.clone()).collect::<Vec<PublicKey>>();
 
         let dec_keys = random_scalars(n, &mut rng);
         let enc_keys = dec_keys.iter().map(|x| g.mul(x)).collect::<Vec<_>>();
@@ -410,9 +416,9 @@ mod tests {
         let mut rxs = Vec::new();
         for i in 0..n {
             let sk = &keys[i].private_key;
-            let add_params = MixedEdReceiverParams::new(bases, mpk.clone(), enc_keys.clone(), sk.clone(), nodes[0].get_own_idx(), sc.clone());
+            let add_params = MixedBLSReceiverParams::new(bases, vkeys.clone(), enc_keys.clone(), sk.clone(), nodes[0].get_own_idx(), sc.clone());
             let (_, rx) =
-                run_protocol!(MixedEdReceiver, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
+                run_protocol!(MixedBLSReceiver, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
             // txs.push(tx);
             rxs.push(rx);
         }
@@ -423,8 +429,8 @@ mod tests {
 
 
 
-        let params = MixedEdSenderParams::new(bases, mpk, enc_keys, sc.clone(), s);
-        let _ = run_protocol!(MixedEdSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
+        let params = MixedBLSSenderParams::new(bases, vkeys, enc_keys, sc.clone(), s);
+        let _ = run_protocol!(MixedBLSSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 
         for (i, rx) in rxs.iter_mut().enumerate() {
             match rx.recv().await {

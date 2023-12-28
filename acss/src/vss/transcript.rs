@@ -39,10 +39,6 @@ impl TranscriptBLS {
     }
 }
 
-
-
-
-
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Clone, Default)]
 // NOTE: We are omitting sending the coms a part of the transcript again as the 
@@ -73,7 +69,7 @@ impl TranscriptEd {
 
 #[allow(non_snake_case)]
 #[derive(Clone, Serialize, Deserialize, Default)]
-pub struct TranscriptMixed {
+pub struct TranscriptMixedBLS {
     coms: Vec<G1Projective>,
     shares: Vec<Scalar>,
     randomness: Vec<Scalar>,
@@ -85,7 +81,7 @@ pub struct TranscriptMixed {
     pub(crate) share_pf: ProofSharing, // NIZK proof of correct sharing
 }
 
-impl TranscriptMixed {
+impl TranscriptMixedBLS {
     pub fn new(
         coms:Vec<G1Projective>, 
         shares:Vec<Scalar>, 
