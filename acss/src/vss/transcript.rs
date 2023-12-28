@@ -45,7 +45,7 @@ impl TranscriptBLS {
 // the dealer already sent it as part of ShareMsg
 pub struct TranscriptEd {
     shares: Vec<Scalar>, // Shares of those who did not sign
-    randomness: Vec<Scalar>, // Pedersen commitment randomness of those who did not sign
+    randomness: Vec<Scalar>, // commitment randomness of those who did not sign
     agg_sig : EdSignature, // Multisignature from the set of nodes who received valid shares
 }
 
@@ -66,6 +66,52 @@ impl TranscriptEd {
         &self.agg_sig
     }
 }
+
+
+#[allow(non_snake_case)]
+#[derive(Clone, Serialize, Deserialize, Default)]
+pub struct TranscriptGroth {
+    coms: Vec<G1Projective>,
+    pub(crate) ciphertext: CiphertextChunks, // Chunkciphertext of the remaining parties
+    pub(crate) chunk_pf: ProofChunking, // NIZK proof of correct encryption
+    pub(crate) r_bb : G1Projective,  // ElGamal Encryption of h^r
+    pub(crate) enc_rr: Vec<G1Projective>,
+    pub(crate) share_pf: ProofSharing, // NIZK proof of correct sharing
+}
+
+impl TranscriptGroth {
+    pub fn new(
+        coms:Vec<G1Projective>, 
+        ciphertext: CiphertextChunks, 
+        chunk_pf: ProofChunking, 
+        r_bb: G1Projective,
+        enc_rr: Vec<G1Projective>,
+        share_pf: ProofSharing,
+    ) -> Self {
+        Self{coms, ciphertext, chunk_pf, r_bb, enc_rr, share_pf}
+    }
+
+    pub fn coms(&self) -> &Vec<G1Projective> {
+        &self.coms
+    }
+
+    pub fn ciphertext(&self) -> &CiphertextChunks {
+        &self.ciphertext
+    }
+
+    pub fn chunk_pf(&self) -> &ProofChunking {
+        &self.chunk_pf
+    }
+
+    pub fn share_pf(&self) -> &ProofSharing {
+        &self.share_pf
+    }
+
+    pub fn enc_rr(&self) -> &[G1Projective] {
+        &self.enc_rr
+    }
+}
+
 
 #[allow(non_snake_case)]
 #[derive(Clone, Serialize, Deserialize, Default)]

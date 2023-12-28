@@ -413,15 +413,12 @@ mod tests {
             let add_params = MixedEdReceiverParams::new(bases, mpk.clone(), enc_keys.clone(), sk.clone(), nodes[0].get_own_idx(), sc.clone());
             let (_, rx) =
                 run_protocol!(MixedEdReceiver, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
-            // txs.push(tx);
             rxs.push(rx);
         }
 
         // Adding half second to start all the receivers, and starting the sender only after it.
         let duration = Duration::from_millis(500);
         thread::sleep(duration);
-
-
 
         let params = MixedEdSenderParams::new(bases, mpk, enc_keys, sc.clone(), s);
         let _ = run_protocol!(MixedEdSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
