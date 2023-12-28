@@ -233,7 +233,7 @@ impl<B,P,F> RBCReceiver<B,P,F>
                             *count += 1;
 
                             // Send ready
-                            if *count >= 2 * self.params.node.get_threshold() - 1 {
+                            if *count >= 2 * self.params.node.get_threshold() + 1 {
                                 self.params.handle.handle_stats_event("Send ready from echo");
                                     self.send_ready(&mut ready_sent, digest).await;
                             }
@@ -254,13 +254,13 @@ impl<B,P,F> RBCReceiver<B,P,F>
                             *count += 1;
 
                             // Ready amplication
-                            if *count >= self.params.node.get_threshold() {
+                            if *count > self.params.node.get_threshold() {
                                 self.params.handle.handle_stats_event("Send ready from ready");
                                 self.send_ready(&mut ready_sent, digest).await;
                             }
 
                             // Deliver and Terminate
-                            if *count >= 2 * self.params.node.get_threshold() - 1 {
+                            if *count >= 2 * self.params.node.get_threshold() + 1 {
                                 // TODO: Check if the node already received coms from the sender or not before returning ACSSDeliver
                                 self.params.handle.unsubscribe::<ReadyMsg>(&self.params.id).await;
 

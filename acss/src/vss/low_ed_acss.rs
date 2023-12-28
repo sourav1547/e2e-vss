@@ -1,6 +1,5 @@
 extern crate core;
 
-use std::collections::HashSet;
 use std::sync::Arc;
 use std::thread;
 
@@ -88,7 +87,6 @@ pub fn get_transcript(shares: &Vec<Share>, coms: &Vec<G1Projective>, signers: &V
 
 // Takes as input a vector of boolean indicating which signers are set
 pub fn aggregate_sig(signers: Vec<bool>, sigs: Vec<Ed25519Signature>) -> EdSignature {
-    // AggregateSignature::new(BitVec::from(signers), Some(bls12381::Signature::aggregate(sigs).unwrap()))
     let mut indices: Vec<usize> = Vec::with_capacity(sigs.len());
     for i in 0..signers.len() {
         if signers[i] {
@@ -112,9 +110,9 @@ pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptEd, sc: &Sharin
 
     // Checking correctness of aggregate signature
     let mut hasher = Sha256::new();
-    hasher.update(bcs::to_bytes(&coms).unwrap());
+    hasher.update(bcs::to_bytes(coms).unwrap());
     let root: [u8; 32] = hasher.finalize().into();
-    assert!(t.agg_sig().verify(root.as_slice(), pk));
+    assert!(t.agg_sig().verify(root.as_slice(), &pk));
 
     let mut missing_coms = Vec::with_capacity(t.shares().len());
 
@@ -309,9 +307,6 @@ impl LowEdReceiver {
     }
 }
 
-
-
-
 #[cfg(test)]
 mod tests {
     use std::thread;
@@ -336,25 +331,27 @@ mod tests {
         let mut rng = thread_rng();
         let seed = b"hello";
         
-        let start = 10098;
-        let end = 10114; 
-        let n = end-start;
-        let th = 2*n/3;
-        let pp = RBCParams::new(n as usize, th as usize);
+        let th: usize = 1;
+        let deg = 2*th;
+        let n = 3*th + 1;
+        let start: u16 = 10098;
+        let end = start + n as u16; 
+        
+        let pp = RBCParams::new(n, th);
         
         let g = G1Projective::generator(); 
         let h = G1Projective::hash_to_curve(seed, DST_PVSS_PUBLIC_PARAMS_GENERATION.as_slice(), b"h");
         let bases = [g, h];
 
-        let (nodes, handles) = generate_nodes::<RBCParams>(start, end, th.into(), pp);
+        let (nodes, handles) = generate_nodes::<RBCParams>(start, end, th, pp);
         let n = nodes.len();
 
-        let sc = SharingConfiguration::new(th.into(), n);
+        let sc = SharingConfiguration::new(deg+1, n);
         let s = InputSecret::new_random(&sc, true, &mut rng);
 
         let keys = generate_ed_sig_keys(n);
         let ver_keys = keys.iter().map(|x| x.public_key.clone()).collect::<Vec<Ed25519PublicKey>>();
-        let mpk = MultiEd25519PublicKey::new(ver_keys, n).unwrap();
+        let mpk = MultiEd25519PublicKey::new(ver_keys, deg+1).unwrap();
 
         let id = Id::default();
         let dst = "DST".to_string();

@@ -335,21 +335,21 @@ mod tests {
         let mut rng = thread_rng();
         let seed = b"hello";
         
-        let start = 10098;
-        let end = 10114; 
-        let n = end-start;
-        let th = n/3;
-        let deg = 2*th -1;
+        let th: usize = 4;
+        let deg = 2*th;
+        let n = 3*th + 1;
+        let start: u16 = 10098;
+        let end = start + n as u16; 
         let pp = RBCParams::new(n as usize, th as usize);
         
         let g = G1Projective::generator(); 
         let h = G1Projective::hash_to_curve(seed, DST_PVSS_PUBLIC_PARAMS_GENERATION.as_slice(), b"h");
         let bases = [g, h];
 
-        let (nodes, handles) = generate_nodes::<RBCParams>(start, end, th.into(), pp);
+        let (nodes, handles) = generate_nodes::<RBCParams>(start, end, th, pp);
         let n = nodes.len();
 
-        let sc = SharingConfiguration::new(deg.into(), n);
+        let sc = SharingConfiguration::new(deg+1, n);
         let s = InputSecret::new_random(&sc, true, &mut rng);
 
         let keys = generate_bls_sig_keys(n);
