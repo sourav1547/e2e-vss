@@ -1,15 +1,16 @@
 extern crate core;
 
-use std::collections::HashSet;
 use std::sync::Arc;
 use std::thread;
 
 use aptos_bitvec::BitVec;
+use aptos_crypto::Signature;
 use blstrs::{G1Projective, Scalar};
 use ff::Field;
 use network::subscribe_msg;
 use protocol::{Protocol, ProtocolParams,run_protocol};
 use rand::thread_rng;
+use serde::{Serialize, Deserialize};
 use sha2::{Digest, Sha256};
 use utils::{close_and_drain, shutdown_done};
 use utils::tokio;
@@ -23,52 +24,48 @@ use crate::vss::keys::InputSecret;
 use crate::pvss::SharingConfiguration;
 use super::common::{Share, gen_coms_shares};
 use super::messages::*;
-use super::sigs::EdSignature;
-use super::transcript::TranscriptEd;
-use aptos_crypto::Signature;
-use aptos_crypto::ed25519::{Ed25519PrivateKey, Ed25519Signature};
-use aptos_crypto::multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature};
+use super::sigs::AggregateSignature;
+use super::transcript::TranscriptBLS;
 
-// This would be nicer if it were generic. However, to sensibly do this, one would have to define
-// traits for groups/fields (because e.g., Ark does not use the RustCrypto group, field, etc. traits)
-// which is out of scope.
+use aptos_crypto::{
+    bls12381,
+    bls12381::{PrivateKey, PublicKey}, 
+    SigningKey
+};
+
+
 #[derive(Clone)]
-pub struct LowEdSenderParams {
+pub struct LowBLSSenderParams {
     pub bases: [G1Projective; 2],
-    pub vks : MultiEd25519PublicKey,
+    pub vks : Vec<PublicKey>,
     pub sc: SharingConfiguration, 
     pub s: InputSecret,
 }
 
-impl LowEdSenderParams {
-    pub fn new(bases: [G1Projective; 2], vks: MultiEd25519PublicKey, sc: SharingConfiguration, s: InputSecret) -> Self {
+impl LowBLSSenderParams {
+    pub fn new(bases: [G1Projective; 2], vks: Vec<PublicKey>, sc: SharingConfiguration, s: InputSecret) -> Self {
         Self { bases, vks, sc, s }
     }
 }
-pub struct LowEdSender {
-    params: ProtocolParams<RBCParams, Shutdown, ()>,
-    additional_params: Option<LowEdSenderParams>,
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct AckMsg {
+    pub sig: bls12381::Signature,
 }
 
-
-impl Protocol<RBCParams, LowEdSenderParams, Shutdown, ()> for LowEdSender {
-    fn new(params: ProtocolParams<RBCParams, Shutdown, ()>) -> Self {
-        Self { params, additional_params: None }
-    }
-
-    fn additional_params(&mut self, params: LowEdSenderParams) {
-        self.additional_params = Some(params);
+impl AckMsg {
+    pub fn new(sig: bls12381::Signature) -> Self {
+        Self {sig}
     }
 }
 
-// type B = Vec<(usize, Ed25519Signature)>;
-type B = TranscriptEd;
+type B = TranscriptBLS;
 type P = Share;
-type F = Box<dyn Fn(&TranscriptEd, &Share) -> bool + Send + Sync>;
+type F = Box<dyn Fn(&B, &P) -> bool + Send + Sync>;
 
 // This function outputs the Mixed-VSS transcript. 
 // This function assumes that all signatures are valid
-pub fn get_transcript(shares: &Vec<Share>, coms: &Vec<G1Projective>, signers: &Vec<bool>, sigs: Vec<Ed25519Signature>) -> TranscriptEd {
+pub fn get_transcript(shares: &Vec<Share>, coms: &Vec<G1Projective>, signers: &Vec<bool>, sigs: Vec<bls12381::Signature>) -> TranscriptBLS {
     let agg_sig = aggregate_sig(signers.clone(), sigs);
     let n = shares.len();
     let missing_count = n-agg_sig.get_num_voters();
@@ -83,25 +80,15 @@ pub fn get_transcript(shares: &Vec<Share>, coms: &Vec<G1Projective>, signers: &V
         }
     }
 
-    TranscriptEd::new(coms.clone(), m_shares, m_randomness, agg_sig)
+    TranscriptBLS::new(coms.clone(), m_shares, m_randomness, agg_sig)
 }
 
 // Takes as input a vector of boolean indicating which signers are set
-pub fn aggregate_sig(signers: Vec<bool>, sigs: Vec<Ed25519Signature>) -> EdSignature {
-    // AggregateSignature::new(BitVec::from(signers), Some(bls12381::Signature::aggregate(sigs).unwrap()))
-    let mut indices: Vec<usize> = Vec::with_capacity(sigs.len());
-    for i in 0..signers.len() {
-        if signers[i] {
-            indices.push(i);
-        }
-    }
-
-    let new_sigs = sigs.iter().zip(indices.iter()).map(|(s, &i)| (s.clone(),i)).collect::<Vec<(Ed25519Signature,usize)>>();
-    let mt_sig = MultiEd25519Signature::new(new_sigs);
-    EdSignature::new(BitVec::from(signers), Some(mt_sig.unwrap()))
+pub fn aggregate_sig(signers: Vec<bool>, sigs: Vec<bls12381::Signature>) -> AggregateSignature {
+    AggregateSignature::new(BitVec::from(signers), Some(bls12381::Signature::aggregate(sigs).unwrap()))
 }
 
-pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptEd, sc: &SharingConfiguration, bases: &[G1Projective; 2], pk: &MultiEd25519PublicKey) -> bool {
+pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptBLS, sc: &SharingConfiguration, bases: &[G1Projective; 2], pks: &Vec<PublicKey>) -> bool {
     let num_signed = t.agg_sig().get_num_voters();
     let n = sc.n;
     let missing_ct = n-num_signed;
@@ -114,7 +101,9 @@ pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptEd, sc: &Sharin
     let mut hasher = Sha256::new();
     hasher.update(bcs::to_bytes(&coms).unwrap());
     let root: [u8; 32] = hasher.finalize().into();
-    assert!(t.agg_sig().verify(root.as_slice(), pk));
+
+    let mpk = pks.iter().map(|x| x).collect::<Vec<&PublicKey>>();
+    assert!(t.agg_sig().verify(root.as_slice(), &mpk));
 
     let mut missing_coms = Vec::with_capacity(t.shares().len());
 
@@ -141,12 +130,27 @@ pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptEd, sc: &Sharin
     com_pos == com
 }
 
-impl LowEdSender {
+pub struct LowBLSSender {
+    params: ProtocolParams<RBCParams, Shutdown, ()>,
+    additional_params: Option<LowBLSSenderParams>,
+}
+
+impl Protocol<RBCParams, LowBLSSenderParams, Shutdown, ()> for LowBLSSender {
+    fn new(params: ProtocolParams<RBCParams, Shutdown, ()>) -> Self {
+        Self { params, additional_params: None }
+    }
+
+    fn additional_params(&mut self, params: LowBLSSenderParams) {
+        self.additional_params = Some(params);
+    }
+}
+
+impl LowBLSSender {
     pub async fn run(&mut self) {
         self.params.handle.handle_stats_start("ACSS Sender");
         let mut rx_ack = subscribe_msg!(self.params.handle, &self.params.id, AckMsg);
 
-        let LowEdSenderParams{sc, s, bases, vks} = self.additional_params.take().expect("No additional params given!");
+        let LowBLSSenderParams{sc, s, bases, vks} = self.additional_params.take().expect("No additional params given!");
 
         let node = self.params.node.clone();
         let (coms, shares) = gen_coms_shares(&sc, &s, &bases);
@@ -173,7 +177,6 @@ impl LowEdSender {
         }
 
         // Handling ack messages
-        let public_keys = vks.public_keys();
         let mut signers = vec![false; sc.n];
         let mut sigs = Vec::with_capacity(sc.t);
         
@@ -189,7 +192,7 @@ impl LowEdSender {
                     if signers[sender] {continue}
 
                     if let Ok(ack_msg) = msg.get_content::<AckMsg>() {
-                        if ack_msg.sig.verify_arbitrary_msg(root.as_slice(), &public_keys[sender]).is_ok() {       
+                        if ack_msg.sig.verify_arbitrary_msg(root.as_slice(), &vks[sender]).is_ok() {       
                             signers[sender] = true;
                             sigs.push(ack_msg.sig);
                             
@@ -215,14 +218,14 @@ impl LowEdSender {
 #[derive(Clone)]
 pub struct LowEdReceiverParams {
     pub bases : [G1Projective; 2],
-    pub mpk : MultiEd25519PublicKey,
-    pub sk : Ed25519PrivateKey,
+    pub mpk : Vec<PublicKey>,
+    pub sk : PrivateKey,
     pub sender: usize,
     pub sc: SharingConfiguration,
 }
 
 impl LowEdReceiverParams {
-    pub fn new(bases: [G1Projective;2], mpk: MultiEd25519PublicKey, sk: Ed25519PrivateKey, sender: usize, sc: SharingConfiguration) -> Self {
+    pub fn new(bases: [G1Projective;2], mpk: Vec<PublicKey>, sk: PrivateKey, sender: usize, sc: SharingConfiguration) -> Self {
         Self { bases, mpk, sk, sender, sc }
     }
 }
@@ -287,16 +290,13 @@ impl LowEdReceiver {
             }
         }
 
-        // let num_peers = self.params.node.get_num_nodes();
-        let node = self.params.node.clone();
         let coms_clone = coms.clone();
-        let pk_clone = mpk.clone();
-        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a TranscriptEd, &'b Share) -> bool + Send + Sync>> = Arc::new(Box::new(move |t, share| {
-            verify_transcript(&coms_clone, t, &sc, &bases, &pk_clone)
+        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a TranscriptBLS, &'b Share) -> bool + Send + Sync>> = Arc::new(Box::new(move |t, share| {
+            verify_transcript(&coms_clone, t, &sc, &bases, &mpk)
         }));
 
         let add_params = RBCReceiverParams::new(sender, verify);
-        let (_, mut rx) = run_protocol!(RBCReceiver<B, P, F>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), add_params);
+        let (_, mut rx) = run_protocol!(RBCReceiver<B, P, F>, self.params.handle.clone(), self.params.node.clone(), self.params.id.clone(), self.params.dst.clone(), add_params);
 
         match rx.recv().await {
             Some(RBCDeliver { .. }) => {
@@ -317,7 +317,6 @@ mod tests {
     use std::thread;
     use std::time::Duration;
 
-    use aptos_crypto::ed25519::Ed25519PublicKey;
     use group::Group;
     use rand::thread_rng;
     use network::message::Id;
@@ -326,7 +325,7 @@ mod tests {
     use utils::tokio;
     use crate::DST_PVSS_PUBLIC_PARAMS_GENERATION;
     use crate::pvss::SharingConfiguration;
-    use crate::vss::common::{generate_ed_sig_keys, low_deg_test};
+    use crate::vss::common::{low_deg_test, generate_bls_sig_keys};
     use crate::vss::keys::InputSecret;
     use crate::vss::messages::ACSSDeliver;
     use super::*;
@@ -339,7 +338,8 @@ mod tests {
         let start = 10098;
         let end = 10114; 
         let n = end-start;
-        let th = 2*n/3;
+        let th = n/3;
+        let deg = 2*th -1;
         let pp = RBCParams::new(n as usize, th as usize);
         
         let g = G1Projective::generator(); 
@@ -349,12 +349,11 @@ mod tests {
         let (nodes, handles) = generate_nodes::<RBCParams>(start, end, th.into(), pp);
         let n = nodes.len();
 
-        let sc = SharingConfiguration::new(th.into(), n);
+        let sc = SharingConfiguration::new(deg.into(), n);
         let s = InputSecret::new_random(&sc, true, &mut rng);
 
-        let keys = generate_ed_sig_keys(n);
-        let ver_keys = keys.iter().map(|x| x.public_key.clone()).collect::<Vec<Ed25519PublicKey>>();
-        let mpk = MultiEd25519PublicKey::new(ver_keys, n).unwrap();
+        let keys = generate_bls_sig_keys(n);
+        let vkeys = keys.iter().map(|x| x.public_key.clone()).collect::<Vec<PublicKey>>();
 
         let id = Id::default();
         let dst = "DST".to_string();
@@ -362,7 +361,7 @@ mod tests {
         let mut rxs = Vec::new();
         for i in 0..n {
             let sk = &keys[i].private_key;
-            let add_params = LowEdReceiverParams::new(bases, mpk.clone(), sk.clone(), nodes[0].get_own_idx(), sc.clone());
+            let add_params = LowEdReceiverParams::new(bases, vkeys.clone(), sk.clone(), nodes[0].get_own_idx(), sc.clone());
             let (_, rx) =
                 run_protocol!(LowEdReceiver, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
             // txs.push(tx);
@@ -373,8 +372,8 @@ mod tests {
         let duration = Duration::from_millis(500);
         thread::sleep(duration);
 
-        let params = LowEdSenderParams::new(bases, mpk, sc.clone(), s);
-        let _ = run_protocol!(LowEdSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
+        let params = LowBLSSenderParams::new(bases, vkeys, sc.clone(), s);
+        let _ = run_protocol!(LowBLSSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 
         for (i, rx) in rxs.iter_mut().enumerate() {
             match rx.recv().await {

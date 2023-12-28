@@ -339,12 +339,12 @@ mod tests {
         let start = 10098;
         let end = 10114; 
         let n = end-start;
-        let t = n/2;
-        let pp = RBCParams::new(n, t);
+        let t = n/3;
+        let pp = RBCParams::new(n as usize, t as usize);
 
         let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a Vec<blstrs::G1Projective>, &'b Scalar) -> bool + Send + Sync>> = Arc::new(Box::new(|a, b| true));
 
-        let (nodes, handles) = generate_nodes::<RBCParams>(10098, 10114, t, pp);
+        let (nodes, handles) = generate_nodes::<RBCParams>(start, end, t.into(), pp);
         let n = nodes.len();
 
         // Creating dummy messaages

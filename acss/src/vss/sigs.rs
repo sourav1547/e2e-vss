@@ -13,7 +13,7 @@ use aptos_crypto::multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature};
 /// it stores a bit mask representing the set of validators participating in the signing process
 /// and the multi-signature/aggregated signature itself,
 /// which was aggregated from these validators' partial BLS signatures.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher, BCSCryptoHash)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher, BCSCryptoHash, Default)]
 pub struct AggregateSignature {
     validator_bitmask: BitVec,
     sig: Option<bls12381::Signature>,
@@ -96,7 +96,7 @@ impl AggregateSignature {
 /// it stores a bit mask representing the set of validators participating in the signing process
 /// and the multi-signature/aggregated signature itself,
 /// which was aggregated from these validators' partial BLS signatures.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher, BCSCryptoHash)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, CryptoHasher, BCSCryptoHash, Default)]
 pub struct EdSignature {
     validator_bitmask: BitVec,
     sig: Option<MultiEd25519Signature>,
@@ -153,6 +153,6 @@ impl EdSignature {
     pub fn verify(&self, msg: &[u8], pk: &MultiEd25519PublicKey) -> bool {
         let sig = self.sig.clone().unwrap();
         let valid = sig.verify_arbitrary_msg(&msg, &pk).is_ok();
-        valid
+        return valid;
     }
 }

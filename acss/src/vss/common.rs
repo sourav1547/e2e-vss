@@ -1,8 +1,10 @@
 use std::ops::Mul;
 
+use aptos_crypto::{ed25519::{Ed25519PrivateKey, Ed25519Signature, Ed25519PublicKey}, test_utils::{KeyPair, TEST_SEED}, Uniform};
 use blstrs::{Scalar, G1Projective};
 use group::Group;
-use rand::{distributions::Uniform, prelude::Distribution, thread_rng};
+use rand::{distributions, prelude::Distribution, thread_rng, rngs::StdRng};
+use rand_core::SeedableRng;
 use serde::{Serialize, Deserialize};
 
 use crate::{evaluation_domain::BatchEvaluationDomain, lagrange::all_lagrange_denominators, random_scalars, fft::{fft_assign, fft}, pvss::SharingConfiguration};
@@ -13,7 +15,7 @@ use super::keys::InputSecret;
 /// Return a random scalar within a small range [0,n) 
 pub fn random_scalar_range<R>(mut rng: &mut R, u: u64) -> Scalar 
     where R: rand_core::RngCore + rand::Rng + rand_core::CryptoRng + rand::CryptoRng {
-    let die = Uniform::from(0..u);
+    let die = distributions::Uniform::from(0..u);
     let val = die.sample(&mut rng);
     Scalar::from(val)
 }
@@ -112,4 +114,30 @@ pub fn gen_coms_shares(sc: &SharingConfiguration, s: &InputSecret, bases: &[G1Pr
         coms.push(G1Projective::multi_exp(bases, scalars.as_slice())); 
     }
     (coms , shares)
+}
+
+pub fn sign_verified_deal(sig_key: Ed25519PrivateKey, msg: Vec<u8>) -> Option<Ed25519Signature> {
+    return Some(sig_key.sign_arbitrary_message(msg.as_slice()));
+}
+
+pub fn share_verify(idx: usize, coms: &Vec<G1Projective>, share: &Share, bases: &[G1Projective; 2], sc: &SharingConfiguration) -> bool {
+    let com: G1Projective = coms[idx];
+    let e_com = G1Projective::multi_exp(bases, &share.share);
+    com.eq(&e_com)  && low_deg_test(coms, sc)
+}
+
+pub fn generate_ed_sig_keys(n: usize) -> Vec<KeyPair<Ed25519PrivateKey, Ed25519PublicKey>> {
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    (0..n)
+        .map(|_| KeyPair::<Ed25519PrivateKey, Ed25519PublicKey>::generate(&mut rng))
+        .collect()
+}
+
+use aptos_crypto::bls12381::{PrivateKey, PublicKey};
+// Helper function to generate N bls12381 private keys.
+pub fn generate_bls_sig_keys(n: usize) -> Vec<KeyPair<PrivateKey, PublicKey>> {
+    let mut rng = StdRng::from_seed(TEST_SEED);
+    (0..n)
+        .map(|_| KeyPair::<PrivateKey, PublicKey>::generate(&mut rng))
+        .collect()
 }
