@@ -28,9 +28,6 @@ use aptos_crypto::Signature;
 use aptos_crypto::ed25519::{Ed25519PrivateKey, Ed25519Signature};
 use aptos_crypto::multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature};
 
-// This would be nicer if it were generic. However, to sensibly do this, one would have to define
-// traits for groups/fields (because e.g., Ark does not use the RustCrypto group, field, etc. traits)
-// which is out of scope.
 #[derive(Clone)]
 pub struct LowEdSenderParams {
     pub bases: [G1Projective; 2],
@@ -65,9 +62,8 @@ type B = TranscriptEd;
 type P = Share;
 type F = Box<dyn Fn(&TranscriptEd, Option<&Share>) -> bool + Send + Sync>;
 
-// This function outputs the Mixed-VSS transcript. 
 // This function assumes that all signatures are valid
-pub fn get_transcript(shares: &Vec<Share>, coms: &Vec<G1Projective>, signers: &Vec<bool>, sigs: Vec<Ed25519Signature>) -> TranscriptEd {
+pub fn get_transcript(shares: &Vec<Share>, signers: &Vec<bool>, sigs: Vec<Ed25519Signature>) -> TranscriptEd {
     let agg_sig = aggregate_sig(signers.clone(), sigs);
     let n = shares.len();
     let missing_count = n-agg_sig.get_num_voters();
@@ -210,7 +206,7 @@ impl LowEdSender {
             }
         }
 
-        let t = get_transcript(&shares, &coms, &signers, sigs);
+        let t = get_transcript(&shares, &signers, sigs);
         assert!(t.agg_sig().verify(root.as_slice(), &vks));
 
         let params = RBCSenderParams::new(t, None);
@@ -253,11 +249,17 @@ impl LowEdReceiver {
     pub async fn run(&mut self) {
         let LowEdReceiverParams{bases, mpk, sk, sender, sc} = self.additional_params.take().expect("No additional params!");
         self.params.handle.handle_stats_start(format!("ACSS Receiver {}", sender));
+
+        // TODO: We can even make this verify function optional
+        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a TranscriptEd, Option<&'b Share>) -> bool + Send + Sync>> = Arc::new(Box::new(move |_, _| {
+            true
+        }));
+
+        let rbc_params = RBCReceiverParams::new(sender, verify);
+        let (_, mut rx) = run_protocol!(RBCReceiver<B, P, F>, self.params.handle.clone(), self.params.node.clone(), self.params.id.clone(), self.params.dst.clone(), rbc_params);
         
         let mut rx_share = subscribe_msg!(self.params.handle, &self.params.id, ShareMsg);
-        let mut coms = Vec::new();
-        let mut share: Share;
-        let root: [u8; 32];
+        let (tx_oneshot, rx_oneshot) = oneshot::channel();
 
         loop {
             select! {
@@ -265,22 +267,23 @@ impl LowEdReceiver {
                     if msg.get_sender() == &sender {
                         if let Ok(share_msg) = msg.get_content::<ShareMsg>() {
 
-                            coms = share_msg.coms;
-                            share = share_msg.share;
-
                             self.params.handle.handle_stats_event("Before share_msg.is_correct");
-                            if share_verify(self.params.node.get_own_idx(), &coms, &share, &bases, &sc) {
+                            if share_verify(self.params.node.get_own_idx(), &share_msg.coms, &share_msg.share, &bases, &sc) {
                                 self.params.handle.handle_stats_event("After share_msg.is_correct");
 
                                 let mut hasher = Sha256::new();
-                                hasher.update(bcs::to_bytes(&coms).unwrap());
-                                root = hasher.finalize().into();
+                                hasher.update(bcs::to_bytes(&share_msg.coms).unwrap());
+                                let root: [u8; 32] = hasher.finalize().into();
 
                                 let sig = Some(sk.sign_arbitrary_message(root.as_slice())).unwrap();
 
                                 // Respond with ACK message
                                 let ack = AckMsg::new(sig);
                                 self.params.handle.send(sender, &self.params.id, &ack).await;
+
+                                let _ = thread::spawn(move || {
+                                    let _ = tx_oneshot.send((share_msg.coms, share_msg.share));
+                                });
                                 
                                 self.params.handle.unsubscribe::<ShareMsg>(&self.params.id).await;
                                 close_and_drain!(rx_share);
@@ -294,21 +297,16 @@ impl LowEdReceiver {
             }
         }
 
-        // let num_peers = self.params.node.get_num_nodes();
-        let node = self.params.node.clone();
-        let coms_clone = coms.clone();
-        let pk_clone = mpk.clone();
-        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a TranscriptEd, Option<&'b Share>) -> bool + Send + Sync>> = Arc::new(Box::new(move |t, _| {
-            verify_transcript(&coms_clone, t, &sc, &bases, &pk_clone)
-        }));
-
-        let add_params = RBCReceiverParams::new(sender, verify);
-        let (_, mut rx) = run_protocol!(RBCReceiver<B, P, F>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), add_params);
-
         match rx.recv().await {
-            Some(RBCDeliver { .. }) => {
-                let deliver = ACSSDeliver::new(share, coms, sender);
-                self.params.tx.send(deliver).await.expect("Send to parent failed!");
+            Some(RBCDeliver {bmsg, .. }) => {
+                select! {
+                    Ok((coms, share)) = rx_oneshot => {
+                        if verify_transcript(&coms, &bmsg, &sc, &bases, &mpk) {
+                            let deliver = ACSSDeliver::new(share, coms, sender);
+                            self.params.tx.send(deliver).await.expect("Send to parent failed!");
+                        }
+                    }
+                }
                 return
             },
             None => assert!(false),
@@ -340,7 +338,7 @@ mod tests {
         let mut rng = thread_rng();
         let seed = b"hello";
         
-        let th: usize = 4;
+        let th: usize = 12;
         let deg = 2*th;
         let n = 3*th + 1;
         let start: u16 = 10098;
