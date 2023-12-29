@@ -299,11 +299,17 @@ impl MixedBLSReceiver {
     pub async fn run(&mut self) {
         let MixedBLSReceiverParams{bases, mpk, eks, sk, sender, sc} = self.additional_params.take().expect("No additional params!");
         self.params.handle.handle_stats_start(format!("ACSS Receiver {}", sender));
+
+        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a TranscriptMixedBLS, Option<&'b Share>) -> bool + Send + Sync>> = Arc::new(Box::new(move |_, _| {
+            true
+        }));
+
+        let rbc_params = RBCReceiverParams::new(sender, verify);
+        let (_, mut rx) = run_protocol!(RBCReceiver<B, P, F>, self.params.handle.clone(), self.params.node.clone(), self.params.id.clone(), self.params.dst.clone(), rbc_params);
+
         
         let mut rx_share = subscribe_msg!(self.params.handle, &self.params.id, ShareMsg);
-        let mut coms = Vec::new();
-        let mut share: Share;
-        let root: [u8; 32];
+        let (tx_oneshot, rx_oneshot) = oneshot::channel();
 
         loop {
             select! {
@@ -311,22 +317,24 @@ impl MixedBLSReceiver {
                     if msg.get_sender() == &sender {
                         if let Ok(share_msg) = msg.get_content::<ShareMsg>() {
 
-                            coms = share_msg.coms;
-                            share = share_msg.share;
-
                             self.params.handle.handle_stats_event("Before share_msg.is_correct");
-                            if share_verify(self.params.node.get_own_idx(), &coms, &share, &bases, &sc) {
+                            if share_verify(self.params.node.get_own_idx(), &share_msg.coms, &share_msg.share, &bases, &sc) {
                                 self.params.handle.handle_stats_event("After share_msg.is_correct");
 
                                 let mut hasher = Sha256::new();
-                                hasher.update(bcs::to_bytes(&coms).unwrap());
-                                root = hasher.finalize().into();
+                                hasher.update(bcs::to_bytes(&share_msg.coms).unwrap());
+                                let root: [u8; 32] = hasher.finalize().into();
 
                                 let sig = Some(sk.sign_arbitrary_message(root.as_slice())).unwrap();
 
                                 // Respond with ACK message
                                 let ack = AckMsg::new(sig);
                                 self.params.handle.send(sender, &self.params.id, &ack).await;
+
+
+                                let _ = thread::spawn(move || {
+                                    let _ = tx_oneshot.send((share_msg.coms, share_msg.share));
+                                });
                                 
                                 self.params.handle.unsubscribe::<ShareMsg>(&self.params.id).await;
                                 close_and_drain!(rx_share);
@@ -340,21 +348,19 @@ impl MixedBLSReceiver {
             }
         }
 
-        // let num_peers = self.params.node.get_num_nodes();
-        let node = self.params.node.clone();
-        let coms_clone = coms.clone();
-        let params = MixedBLSReceiverParams{bases, mpk, eks, sk, sender, sc};
-        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a TranscriptMixedBLS, Option<&'b Share>) -> bool + Send + Sync>> = Arc::new(Box::new(move |t, _| {
-            verify_transcript(&coms_clone, t, &params)
-        }));
-
-        let rbc_params = RBCReceiverParams::new(sender, verify);
-        let (_, mut rx) = run_protocol!(RBCReceiver<B, P, F>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), rbc_params);
-
         match rx.recv().await {
-            Some(RBCDeliver { .. }) => {
-                let deliver = ACSSDeliver::new(share, coms, sender);
-                self.params.tx.send(deliver).await.expect("Send to parent failed!");
+            Some(RBCDeliver { bmsg, .. }) => {
+                let params = MixedBLSReceiverParams{bases, mpk, eks, sk, sender, sc};
+                select! {
+                    Ok((coms, share)) = rx_oneshot => {
+                        if verify_transcript(&coms, &bmsg, &params) {
+                            let deliver = ACSSDeliver::new(share, coms, sender);
+                            self.params.tx.send(deliver).await.expect("Send to parent failed!");
+                        } else {
+                            panic!("Transcript verification failed!");
+                        }
+                    }
+                }
                 return
             },
             None => assert!(false),
