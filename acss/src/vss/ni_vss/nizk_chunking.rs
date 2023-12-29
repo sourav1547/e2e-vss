@@ -63,7 +63,7 @@ pub enum ZkProofChunkingError {
 
 
 /// Zero-knowledge proof of chunking.
-#[derive(Clone, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ProofChunking {
     y0: G1Projective,
     bb: Vec<G1Projective>,

@@ -61,7 +61,7 @@ impl AckMsg {
 
 type B = TranscriptBLS;
 type P = Share;
-type F = Box<dyn Fn(&B, &P) -> bool + Send + Sync>;
+type F = Box<dyn Fn(&B, Option<&P>) -> bool + Send + Sync>;
 
 // This function outputs the Mixed-VSS transcript. 
 // This function assumes that all signatures are valid
@@ -209,7 +209,7 @@ impl LowBLSSender {
         }
 
         let t = get_transcript(&shares, &coms, &signers, sigs);
-        let params = RBCSenderParams::new(t, shares);
+        let params = RBCSenderParams::new(t, None);
         let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), params);
 
     }
@@ -291,7 +291,7 @@ impl LowEdReceiver {
         }
 
         let coms_clone = coms.clone();
-        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a TranscriptBLS, &'b Share) -> bool + Send + Sync>> = Arc::new(Box::new(move |t, share| {
+        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a TranscriptBLS, Option<&'b Share>) -> bool + Send + Sync>> = Arc::new(Box::new(move |t, _| {
             verify_transcript(&coms_clone, t, &sc, &bases, &mpk)
         }));
 

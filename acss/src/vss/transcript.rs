@@ -69,7 +69,7 @@ impl TranscriptEd {
 
 
 #[allow(non_snake_case)]
-#[derive(Clone, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct TranscriptGroth {
     coms: Vec<G1Projective>,
     pub(crate) ciphertext: CiphertextChunks, // Chunkciphertext of the remaining parties
@@ -114,7 +114,7 @@ impl TranscriptGroth {
 
 
 #[allow(non_snake_case)]
-#[derive(Clone, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct TranscriptMixedBLS {
     coms: Vec<G1Projective>,
     shares: Vec<Scalar>,
@@ -186,7 +186,7 @@ impl TranscriptMixedBLS {
     
 }
 
-#[derive(Clone, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct TranscriptMixedEd {
     coms: Vec<G1Projective>,
     shares: Vec<Scalar>,

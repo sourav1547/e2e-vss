@@ -46,7 +46,7 @@ impl Protocol<RBCParams, GrothSenderParams, Shutdown, ()> for GrothSender {
 
 type B = TranscriptGroth;
 type P = Share;
-type F = Box<dyn Fn(&TranscriptGroth, &Share) -> bool + Send + Sync>;
+type F = Box<dyn Fn(&TranscriptGroth, Option<&Share>) -> bool + Send + Sync>;
 
 pub fn get_transcript(params: &GrothSenderParams) -> TranscriptGroth {
     let (coms, ciphertext, r_bb, enc_rr, chunk_pf, sh_pf) = groth_deal(&params.sc, &params.bases, &params.eks, &params.s);
@@ -59,18 +59,12 @@ impl GrothSender {
         self.params.handle.handle_stats_start("ACSS Sender");
 
         let GrothSenderParams{sc, s, bases, eks} = self.additional_params.take().expect("No additional params given!");
-        
-        // TODO: To remove this after making the RBC private message optional
-        let mut shares: Vec<Share> = Vec::new();
-        for _ in 0..sc.n {
-            shares.push(Share{share: [Scalar::zero(), Scalar::zero()]});
-        }
 
         let node = self.params.node.clone();
         let params = GrothSenderParams{sc, s, bases, eks};
         let t = get_transcript(&params);
 
-        let rbc_params = RBCSenderParams::new(t, shares);
+        let rbc_params = RBCSenderParams::new(t, None);
         let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), rbc_params);
     }
 }
@@ -121,7 +115,7 @@ impl GrothReceiver {
         let dk_clone = dk.clone();
         
         let params = GrothReceiverParams{bases, eks, sender, dk, sc};
-        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a TranscriptGroth, &'b Share) -> bool + Send + Sync>> = Arc::new(Box::new(move |t, share| {
+        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a TranscriptGroth, Option<&'b Share>) -> bool + Send + Sync>> = Arc::new(Box::new(move |t, _| {
             verify_transcript(t, &params)
         }));
 

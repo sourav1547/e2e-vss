@@ -62,7 +62,7 @@ impl Protocol<RBCParams, MixedEdSenderParams, Shutdown, ()> for MixedEdSender {
 // type B = Vec<(usize, Ed25519Signature)>;
 type B = TranscriptMixedEd;
 type P = Share;
-type F = Box<dyn Fn(&TranscriptMixedEd, &Share) -> bool + Send + Sync>;
+type F = Box<dyn Fn(&TranscriptMixedEd, Option<&Share>) -> bool + Send + Sync>;
 
 // This function outputs the Mixed-VSS transcript. 
 // This function assumes that all signatures are valid
@@ -250,7 +250,7 @@ impl MixedEdSender {
         let params = MixedEdSenderParams { bases, vks, eks, sc, s };
         let t = get_transcript(&coms,&shares, &signers, &sigs, &params, th);
 
-        let rbc_params = RBCSenderParams::new(t, shares);
+        let rbc_params = RBCSenderParams::new(t, None);
         let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), rbc_params);
 
     }
@@ -336,7 +336,7 @@ impl MixedEdReceiver {
         let node = self.params.node.clone();
         let coms_clone = coms.clone();
         let params = MixedEdReceiverParams{bases, mpk, eks, sk, sender, sc};
-        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a TranscriptMixedEd, &'b Share) -> bool + Send + Sync>> = Arc::new(Box::new(move |t, share| {
+        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a TranscriptMixedEd, Option<&'b Share>) -> bool + Send + Sync>> = Arc::new(Box::new(move |t, _| {
             verify_transcript(&coms_clone, t, &params)
         }));
 

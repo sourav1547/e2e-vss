@@ -45,7 +45,7 @@ impl SharingWitness {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ProofSharing {
     ff: G1Projective,
     aa: G1Projective,

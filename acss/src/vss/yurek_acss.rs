@@ -63,7 +63,7 @@ impl YurekSender {
         // [] Create a vector of encryptions
         // [] Send the encrypted vector
 
-        let params = RBCSenderParams::new(coms, shares);
+        let params = RBCSenderParams::new(coms, Some(shares));
         let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), params);
 
     }
@@ -105,15 +105,18 @@ impl YurekReceiver {
         type B = Vec<G1Projective>;
         type P = Share;
         // type F = dyn Fn(&B, &P) -> bool;
-        type F = Box<dyn Fn(&Vec<G1Projective>, &Share) -> bool + Send + Sync>;
+        type F = Box<dyn Fn(&Vec<G1Projective>, Option<&Share>) -> bool + Send + Sync>;
 
         // let num_peers = self.params.node.get_num_nodes();
         let node = self.params.node.clone();
 
         let node_clone = self.params.node.clone();
-        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a Vec<G1Projective>, &'b Share) -> bool + Send + Sync>> = Arc::new(Box::new(move |coms, share| {
+        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a Vec<G1Projective>, Option<&'b Share>) -> bool + Send + Sync>> = Arc::new(Box::new(move |coms, share| {
+            if share.is_none() {
+                return false
+            }
             let com: G1Projective = coms[node_clone.get_own_idx()];
-            let e_com = G1Projective::multi_exp(&bases, &share.share);
+            let e_com = G1Projective::multi_exp(&bases, &share.unwrap().share);
             com.eq(&e_com)
 
             // TODO:
@@ -127,9 +130,11 @@ impl YurekReceiver {
 
         match rx.recv().await {
             Some(RBCDeliver { bmsg, pmsg, .. }) => {
-                let deliver = ACSSDeliver::new(pmsg, bmsg, sender);
-                self.params.tx.send(deliver).await.expect("Send to parent failed!");
-                return
+                if let Some(pmsg) = pmsg {
+                    let deliver = ACSSDeliver::new(pmsg, bmsg, sender);
+                    self.params.tx.send(deliver).await.expect("Send to parent failed!");
+                    return
+                }
             },
             None => assert!(false),
         }

@@ -6,19 +6,19 @@ use crate::{G1Projective, Scalar};
 pub struct Shutdown(pub oneshot::Sender<()>);
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct SendMsg<B, P> where
+pub struct SendMsg<B, P = ()> where
     B: Serialize + Clone, 
     P: Serialize,
  {
     pub bmsg: B,
-    pub pmsg: P,
+    pub pmsg: Option<P>,
 }
 
 impl<B,P> SendMsg<B,P> where 
     B: Serialize + Clone, 
     P: Serialize,
 {
-    pub fn new(bmsg: B, pmsg: P) -> Self {
+    pub fn new(bmsg: B, pmsg: Option<P>) -> Self {
         Self { bmsg, pmsg }
     }
 }

@@ -21,14 +21,14 @@ use crate::messages::*;
 
 pub const NIVSS_HASH_TO_SCALAR_DST: &[u8; 24] = b"NIVSS_HASH_TO_SCALAR_DST";
 
-pub struct RBCDeliver<B,P> {
+pub struct RBCDeliver<B,P = ()> {
     pub bmsg: B,
-    pub pmsg: P,
+    pub pmsg: Option<P>,
     pub sender: usize,
 }
 
 impl<B,P> RBCDeliver<B,P> {
-    pub fn new(bmsg: B, pmsg: P, sender: usize) -> Self {
+    pub fn new(bmsg: B, pmsg: Option<P>, sender: usize) -> Self {
         Self { bmsg, pmsg, sender }
     }
 }
@@ -51,11 +51,11 @@ impl RBCParams {
 #[derive(Clone)]
 pub struct RBCSenderParams<B, P> {
     pub bmsg: B,
-    pub pmsg: Vec<P>,
+    pub pmsg: Option<Vec<P>>,
 }
 
 impl<B,P> RBCSenderParams<B, P> {
-    pub fn new(bmsg: B, pmsg: Vec<P>) -> Self {
+    pub fn new(bmsg: B, pmsg: Option<Vec<P>>) -> Self {
         Self { bmsg, pmsg }
     }
 }
@@ -98,10 +98,14 @@ impl<B,P> RBCSender<B,P>
 
         select! {
             Ok((bmsg, pmsg)) = rx_oneshot => {
-                for (i, y_s) in pmsg.iter().enumerate() {
-                    let send_msg = SendMsg::new(bmsg.clone(), y_s.clone());
+                let pmsg_vec = pmsg.map_or_else(|| vec![None; self.params.node.get_num_nodes()], |vec| vec.into_iter().map(Some).collect());
+
+                assert_eq!(self.params.node.get_num_nodes(), pmsg_vec.len());
+                for i in 0..self.params.node.get_num_nodes() {
+                    let send_msg = SendMsg::new(bmsg.clone(), pmsg_vec[i].clone());
                     self.params.handle.send(i, &self.params.id, &send_msg).await;
                 }
+
                 self.params.handle.handle_stats_end().await;
             },
             Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
@@ -115,7 +119,7 @@ impl<B,P> RBCSender<B,P>
 #[derive(Clone)]
 pub struct RBCReceiverParams<B, P, F> 
     where
-        F: Fn(&B, &P) -> bool + Send + Sync + 'static + ?Sized,
+        F: Fn(&B, Option<&P>) -> bool + Send + Sync + 'static + ?Sized,
 {
     pub sender: usize,
     pub verify: Arc<F>,
@@ -125,7 +129,7 @@ pub struct RBCReceiverParams<B, P, F>
 
 impl<B, P, F> RBCReceiverParams<B, P, F> 
     where
-        F: Fn(&B, &P) -> bool + Send + Sync + 'static,
+        F: Fn(&B, Option<&P>) -> bool + Send + Sync + 'static,
 {
     pub fn new(sender: usize, verify: Arc<F>) -> Self {
         Self { sender, verify, phantom_b: PhantomData, phantom_p: PhantomData }
@@ -134,7 +138,7 @@ impl<B, P, F> RBCReceiverParams<B, P, F>
 
 pub struct RBCReceiver<B,P,F> 
     where
-        F: Fn(&B, &P) -> bool + Send + Sync + 'static + ?Sized,
+        F: Fn(&B, Option<&P>) -> bool + Send + Sync + 'static + ?Sized,
 {
     params: ProtocolParams<RBCParams, Shutdown, RBCDeliver<B,P>>,
     additional_params: Option<RBCReceiverParams<B,P,F>>,
@@ -142,7 +146,7 @@ pub struct RBCReceiver<B,P,F>
 
 impl<B,P,F: ?Sized> Protocol<RBCParams, RBCReceiverParams<B,P,F>, Shutdown, RBCDeliver<B,P>> for RBCReceiver<B,P,F> 
     where
-        F: Fn(&B, &P) -> bool + Send + Sync + 'static,
+        F: Fn(&B, Option<&P>) -> bool + Send + Sync + 'static,
 {
     fn new(params: ProtocolParams<RBCParams, Shutdown, RBCDeliver<B,P>>) -> Self {
         Self { params, additional_params: None }
@@ -155,9 +159,9 @@ impl<B,P,F: ?Sized> Protocol<RBCParams, RBCReceiverParams<B,P,F>, Shutdown, RBCD
 
 impl<B,P,F> RBCReceiver<B,P,F> 
     where
-        B: 'static + Serialize + Clone + DeserializeOwned + Default, 
-        P: 'static + Serialize + Clone + DeserializeOwned + Default,
-        F: Fn(&B, &P) -> bool + Send + Sync + 'static,
+        B: 'static + Serialize + Clone + DeserializeOwned, 
+        P: 'static + Serialize + Clone + DeserializeOwned,
+        F: Fn(&B, Option<&P>) -> bool + Send + Sync + 'static,
  {
     pub async fn run(&mut self) {
         let RBCReceiverParams{sender, verify, ..} = self.additional_params.take().expect("No additional params!");
@@ -173,8 +177,8 @@ impl<B,P,F> RBCReceiver<B,P,F>
         let mut echo_count = HashMap::new();
         let mut ready_count = HashMap::new();
 
-        let mut bmsg= B::default();
-        let mut pmsg= P::default();
+        let mut bmsg= None;
+        let mut pmsg= None;
 
         loop {
             select! {
@@ -195,17 +199,16 @@ impl<B,P,F> RBCReceiver<B,P,F>
                 Some(msg) = rx_send.recv() => {
                     if msg.get_sender() == &sender {
                         if let Ok(send_msg) = msg.get_content::<SendMsg<B,P>>() {
-
-                            bmsg = send_msg.bmsg;
-                            pmsg = send_msg.pmsg;
-
                             self.params.handle.handle_stats_event("Before send_msg.is_correct");
-                            if verify(&bmsg, &pmsg) {
+                            if verify(&send_msg.bmsg, send_msg.pmsg.as_ref()) {
                                 self.params.handle.handle_stats_event("After send_msg.is_correct");
 
                                 let mut hasher = Sha256::new();
-                                hasher.update(bcs::to_bytes(&bmsg).unwrap());
+                                hasher.update(bcs::to_bytes(&send_msg.bmsg).unwrap());
                                 let digest = hasher.finalize().into();
+
+                                bmsg = Some(send_msg.bmsg);
+                                pmsg = Some(send_msg.pmsg);
 
                                 // Echo message
                                 for i in 0..self.params.node.get_num_nodes() {
@@ -275,8 +278,10 @@ impl<B,P,F> RBCReceiver<B,P,F>
                                 self.params.handle.handle_stats_event("Output");
                                 self.params.handle.handle_stats_end().await;
 
-                                let deliver = RBCDeliver::new(bmsg, pmsg, sender);
-                                self.params.tx.send(deliver).await.expect("Send to parent failed!");
+                                if bmsg.is_some() && pmsg.is_some() {
+                                    let deliver = RBCDeliver::new(bmsg.unwrap(), pmsg.unwrap(), sender);
+                                    self.params.tx.send(deliver).await.expect("Send to parent failed!");
+                                }
 
                                 // Close everything
                                 self.params.handle.unsubscribe::<EchoMsg>(&self.params.id).await;
@@ -328,8 +333,7 @@ mod tests {
         
         type B = Vec<G1Projective>;
         type P = Scalar;
-        // type F = dyn Fn(&B, &P) -> bool;
-        type F = Box<dyn Fn(&B, &P) -> bool + Send + Sync>;
+        type F = Box<dyn Fn(&B, Option<&P>) -> bool + Send + Sync>;
 
         
         let seed = b"hello";
@@ -342,7 +346,7 @@ mod tests {
         let t = n/3;
         let pp = RBCParams::new(n as usize, t as usize);
 
-        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a Vec<blstrs::G1Projective>, &'b Scalar) -> bool + Send + Sync>> = Arc::new(Box::new(|a, b| true));
+        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a Vec<blstrs::G1Projective>, Option<&'b Scalar>) -> bool + Send + Sync>> = Arc::new(Box::new(|a, b| true));
 
         let (nodes, handles) = generate_nodes::<RBCParams>(start, end, t.into(), pp);
         let n = nodes.len();
@@ -369,7 +373,7 @@ mod tests {
         let duration = Duration::from_millis(500);
         thread::sleep(duration);
 
-        let params = RBCSenderParams::new(_bmsg, pmsgs);
+        let params = RBCSenderParams::new(_bmsg, Some(pmsgs));
         let _ = run_protocol!(RBCSender<B,P>, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 
         for (_, rx) in rxs.iter_mut().enumerate() {
