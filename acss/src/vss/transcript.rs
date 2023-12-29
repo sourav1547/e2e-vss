@@ -10,7 +10,24 @@ use super::ni_vss::nizk_chunking::ProofChunking;
 use super::ni_vss::nizk_sharing::ProofSharing;
 
 
-#[derive(Clone, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+pub struct TranscriptYurek {
+    pub coms: Vec<G1Projective>, 
+    pub ek: G1Projective,
+    pub ctxt: Vec<[[u8; 32];2]>,
+}
+
+impl TranscriptYurek {
+    pub fn new(coms: Vec<G1Projective>, ek: G1Projective, ctxt: Vec<[[u8; 32];2]>) -> Self {
+        Self { coms, ek, ctxt }
+    }
+}
+
+
+
+
+#[derive(Clone, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 // NOTE: We are omitting sending the coms a part of the transcript again as the 
 // the dealer already sent it as part of ShareMsg

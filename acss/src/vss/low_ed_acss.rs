@@ -351,7 +351,6 @@ mod tests {
         let bases = [g, h];
 
         let (nodes, handles) = generate_nodes::<RBCParams>(start, end, th, pp);
-        let n = nodes.len();
 
         let sc = SharingConfiguration::new(deg+1, n);
         let s = InputSecret::new_random(&sc, true, &mut rng);
