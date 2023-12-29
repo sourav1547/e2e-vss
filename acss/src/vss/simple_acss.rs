@@ -130,7 +130,7 @@ mod tests {
     use network::message::Id;
     use protocol::run_protocol;
     use protocol::tests::generate_nodes;
-    use utils::tokio;
+    use utils::{tokio, shutdown};
     use crate::DST_PVSS_PUBLIC_PARAMS_GENERATION;
     use crate::pvss::SharingConfiguration;
     use crate::vss::common::low_deg_test;
@@ -140,41 +140,47 @@ mod tests {
 
     use super::*;
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_acss() {
         let mut rng = thread_rng();
         let seed = b"hello";
-        // let pp = ACSSParams::new(n, t);
+
+        let th: usize = 12;
+        let deg = th;
+        let n = 3*th + 1;
+
+        let start: u16 = 10098;
+        let end = start + n as u16; 
+        let pp = RBCParams::new(n, th);
         
         let g = G1Projective::generator(); 
         let h = G1Projective::hash_to_curve(seed, DST_PVSS_PUBLIC_PARAMS_GENERATION.as_slice(), b"h");
         let bases = [g, h];
-        let pp = RBCParams::new(16, 6);
         
-        let (nodes, handles) = generate_nodes::<RBCParams>(10098, 10114, 6, pp);
+        let (nodes, handles) = generate_nodes::<RBCParams>(start, end, th, pp);
 
-        let n = nodes.len();
-        let th= n/2;
-        let sc = SharingConfiguration::new(th, n);
+        let sc = SharingConfiguration::new(deg+1, n);
         let s = InputSecret::new_random(&sc, true, &mut rng);
 
         let id = Id::default();
         let dst = "DST".to_string();
 
+        let mut txs = Vec::new();
         let mut rxs = Vec::new();
         for i in 0..n {
             let add_params = ACSSReceiverParams::new(nodes[0].get_own_idx(), sc.clone(), bases);
-            let (_, rx) =
+            let (tx, rx) =
                 run_protocol!(ACSSReceiver, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
+            txs.push(tx);
             rxs.push(rx);
         }
 
         // Adding half second to start all the receivers, and starting the sender only after it.
-        let duration = Duration::from_millis(500);
+        let duration = Duration::from_millis(1500);
         thread::sleep(duration);
 
         let params = ACSSSenderParams::new(sc.clone(), s, bases);
-        let _ = run_protocol!(ACSSSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
+        let (stx,_) = run_protocol!(ACSSSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 
         for (i, rx) in rxs.iter_mut().enumerate() {
             match rx.recv().await {
@@ -188,7 +194,14 @@ mod tests {
                 None => assert!(false),
             }
         }
-        assert!(true)
+        
+        shutdown!(stx, Shutdown);
+        for tx in txs.iter() {
+            shutdown!(tx, Shutdown);
+        }
+        for handle in handles {
+            handle.shutdown().await;
+        }
     }
     
 }

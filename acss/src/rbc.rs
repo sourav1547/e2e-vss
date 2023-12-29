@@ -366,7 +366,7 @@ mod tests {
         thread::sleep(duration);
 
         let params = RBCSenderParams::new(_bmsg.clone(), Some(pmsgs));
-        let _ = run_protocol!(RBCSender<B,P>, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
+        let (stx, _) = run_protocol!(RBCSender<B,P>, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 
         for (_, rx) in rxs.iter_mut().enumerate() {
             match rx.recv().await {
@@ -376,6 +376,8 @@ mod tests {
                 None => assert!(false),
             }
         }
+
+        shutdown!(stx, Shutdown);
         for tx in txs.iter() {
             shutdown!(tx, Shutdown);
         }

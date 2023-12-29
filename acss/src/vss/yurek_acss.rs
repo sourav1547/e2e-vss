@@ -5,7 +5,7 @@ use std::sync::Arc;
 use blstrs::{G1Projective, Scalar};
 use protocol::{Protocol, ProtocolParams, run_protocol};
 use rand::thread_rng;
-use utils::tokio;
+use utils::{tokio::{self, select}, shutdown_done, close_and_drain};
 use sha3::{Shake128, digest::{Update, ExtendableOutput, XofReader}};
 
 use crate::random_scalar;
@@ -88,21 +88,28 @@ pub fn get_transcript(coms: Vec<G1Projective>, shares: &Vec<Share>, dk: Scalar, 
 impl YurekSender {
     pub async fn run(&mut self) {
         self.params.handle.handle_stats_start("ACSS Sender");
-
         let YurekSenderParams{sc, s, bases, eks} = self.additional_params.take().expect("No additional params given!");
 
-        let node = self.params.node.clone();
+        let dk = {  
+            let mut rng = thread_rng();
+            random_scalar(&mut rng)
+        };
         let (coms, shares) = gen_coms_shares(&sc, &s, &bases);
-
-
-        let mut rng = thread_rng();
-        let dk = random_scalar(&mut rng);
-
-        let params = YurekSenderParams{sc, s, bases, eks};
-        let t = get_transcript(coms, &shares, dk, params);
-        // TODO: We can skip sending the shares again since we already include them as part of the transcript
+        let t = {
+            let params = YurekSenderParams{sc, s, bases, eks};
+            get_transcript(coms, &shares, dk, params)
+        };
+        
         let rbc_params = RBCSenderParams::new(t, Some(shares));
-        let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), rbc_params);
+        let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), self.params.node.clone(), self.params.id.clone(), self.params.dst.clone(), rbc_params);
+
+        select! {
+            Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
+                close_and_drain!(self.params.rx);
+                self.params.handle.handle_stats_end().await;
+                shutdown_done!(tx_shutdown);
+            }
+        }
     }
 }
 
@@ -161,10 +168,21 @@ impl YurekReceiver {
                 if let Some(pmsg) = pmsg {
                     let deliver = ACSSDeliver::new(pmsg, bmsg.coms, sender);
                     self.params.tx.send(deliver).await.expect("Send to parent failed!");
+
+                    close_and_drain!(self.params.rx);
+                    self.params.handle.handle_stats_end().await;
                     return
                 }
             },
             None => assert!(false),
+        }
+
+        select! {
+            Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
+                close_and_drain!(self.params.rx);
+                self.params.handle.handle_stats_end().await;
+                shutdown_done!(tx_shutdown);
+            }
         }
     }
 }
@@ -180,7 +198,7 @@ mod tests {
     use network::message::Id;
     use protocol::run_protocol;
     use protocol::tests::generate_nodes;
-    use utils::tokio;
+    use utils::{tokio, shutdown};
     use crate::{DST_PVSS_PUBLIC_PARAMS_GENERATION, random_scalars};
     use crate::pvss::SharingConfiguration;
     use crate::vss::keys::InputSecret;
@@ -216,11 +234,13 @@ mod tests {
         let dkeys = random_scalars(n, &mut rng);
         let ekeys = dkeys.iter().map(|x| g.mul(x)).collect::<Vec<G1Projective>>();
 
+        let mut txs = Vec::new();
         let mut rxs = Vec::new();
         for i in 0..n {
             let add_params = YurekReceiverParams::new(nodes[0].get_own_idx(), ekeys.clone(), sc.clone(), bases);
-            let (_, rx) =
+            let (tx, rx) =
                 run_protocol!(YurekReceiver, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
+            txs.push(tx);
             rxs.push(rx);
         }
 
@@ -229,7 +249,7 @@ mod tests {
         thread::sleep(duration);
 
         let params = YurekSenderParams::new(sc.clone(), s, bases, ekeys);
-        let _ = run_protocol!(YurekSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
+        let (stx, _) = run_protocol!(YurekSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 
         for (i, rx) in rxs.iter_mut().enumerate() {
             match rx.recv().await {
@@ -243,7 +263,14 @@ mod tests {
                 None => assert!(false),
             }
         }
-        assert!(true)
+
+        shutdown!(stx, Shutdown);
+        for tx in txs.iter() {
+            shutdown!(tx, Shutdown);
+        }
+        for handle in handles {
+            handle.shutdown().await;
+        }
     }
     
 }

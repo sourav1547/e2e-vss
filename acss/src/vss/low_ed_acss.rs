@@ -161,6 +161,9 @@ impl LowEdSender {
                 self.params.handle.handle_stats_end().await;
             },
             Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
+                self.params.handle.unsubscribe::<AckMsg>(&self.params.id).await;
+                close_and_drain!(rx_ack);
+                close_and_drain!(self.params.rx);
                 self.params.handle.handle_stats_end().await;
                 shutdown_done!(tx_shutdown);
             }
@@ -209,8 +212,8 @@ impl LowEdSender {
         let t = get_transcript(&shares, &signers, sigs);
         assert!(t.agg_sig().verify(root.as_slice(), &vks));
 
-        let params = RBCSenderParams::new(t, None);
-        let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), params);
+        let rbc_params = RBCSenderParams::new(t, None);
+        let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), rbc_params);
 
     }
 }
@@ -311,6 +314,16 @@ impl LowEdReceiver {
             },
             None => assert!(false),
         }
+
+        select! {
+            Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
+                self.params.handle.unsubscribe::<ShareMsg>(&self.params.id).await;
+                close_and_drain!(rx_share);
+                close_and_drain!(self.params.rx);
+                self.params.handle.handle_stats_end().await;
+                shutdown_done!(tx_shutdown);
+            }
+        }
     }
 }
 
@@ -325,7 +338,7 @@ mod tests {
     use network::message::Id;
     use protocol::run_protocol;
     use protocol::tests::generate_nodes;
-    use utils::tokio;
+    use utils::{tokio, shutdown};
     use crate::DST_PVSS_PUBLIC_PARAMS_GENERATION;
     use crate::pvss::SharingConfiguration;
     use crate::vss::common::{generate_ed_sig_keys, low_deg_test};
@@ -362,13 +375,14 @@ mod tests {
         let id = Id::default();
         let dst = "DST".to_string();
 
+        let mut txs = Vec::new();
         let mut rxs = Vec::new();
         for i in 0..n {
             let sk = &keys[i].private_key;
             let add_params = LowEdReceiverParams::new(bases, mpk.clone(), sk.clone(), nodes[0].get_own_idx(), sc.clone());
-            let (_, rx) =
+            let (tx, rx) =
                 run_protocol!(LowEdReceiver, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
-            // txs.push(tx);
+            txs.push(tx);
             rxs.push(rx);
         }
 
@@ -377,7 +391,7 @@ mod tests {
         thread::sleep(duration);
 
         let params = LowEdSenderParams::new(bases, mpk, sc.clone(), s);
-        let _ = run_protocol!(LowEdSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
+        let (stx, _) = run_protocol!(LowEdSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 
         for (i, rx) in rxs.iter_mut().enumerate() {
             match rx.recv().await {
@@ -391,7 +405,14 @@ mod tests {
                 None => assert!(false),
             }
         }
-        assert!(true)
+        
+        shutdown!(stx, Shutdown);
+        for tx in txs.iter() {
+            shutdown!(tx, Shutdown);
+        }
+        for handle in handles {
+            handle.shutdown().await;
+        }
     }
     
 }

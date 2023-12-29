@@ -248,18 +248,30 @@ impl MixedBLSSender {
             }
         }
 
-        let mut sigs = Vec::new();
-        for idx in 0..sc.n {
-            if sig_map.contains_key(&idx) {
-                sigs.push(sig_map.get(&idx).unwrap().clone())
+        let t = {
+            let mut sigs = Vec::new();
+            for idx in 0..sc.n {
+                if sig_map.contains_key(&idx) {
+                    sigs.push(sig_map.get(&idx).unwrap().clone())
+                }
             }
-        }
 
-        let params = MixedBLSSenderParams { bases, vks, eks, sc, s };
-        let t = get_transcript(&coms,&shares, &signers, &sigs, &params, th);
+            let params = MixedBLSSenderParams { bases, vks, eks, sc, s };
+            get_transcript(&coms,&shares, &signers, &sigs, &params, th)
+        };
 
         let rbc_params = RBCSenderParams::new(t, None);
         let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), rbc_params);
+
+
+        select! {
+            Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
+                self.params.handle.unsubscribe::<AckMsg>(&self.params.id).await;
+                close_and_drain!(rx_ack);
+                self.params.handle.handle_stats_end().await;
+                shutdown_done!(tx_shutdown);
+            }
+        }
 
     }
 }
@@ -365,6 +377,16 @@ impl MixedBLSReceiver {
             },
             None => assert!(false),
         }
+
+        select! {
+            Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
+                self.params.handle.unsubscribe::<ShareMsg>(&self.params.id).await;
+                close_and_drain!(rx_share);
+                close_and_drain!(self.params.rx);
+                self.params.handle.handle_stats_end().await;
+                shutdown_done!(tx_shutdown);
+            }
+        }
     }
 }
 
@@ -379,7 +401,7 @@ mod tests {
     use network::message::Id;
     use protocol::run_protocol;
     use protocol::tests::generate_nodes;
-    use utils::tokio;
+    use utils::{tokio, shutdown};
     use crate::{DST_PVSS_PUBLIC_PARAMS_GENERATION, random_scalars};
     use crate::pvss::SharingConfiguration;
     use crate::vss::common::{low_deg_test, generate_bls_sig_keys};
@@ -387,7 +409,7 @@ mod tests {
     use crate::vss::messages::ACSSDeliver;
     use super::*;
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 20)]
     async fn test_low_ed_acss() {
         let mut rng = thread_rng();
         let seed = b"hello";
@@ -419,13 +441,14 @@ mod tests {
         let id = Id::default();
         let dst = "DST".to_string();
 
+        let mut txs = Vec::new();
         let mut rxs = Vec::new();
         for i in 0..n {
             let sk = &keys[i].private_key;
             let add_params = MixedBLSReceiverParams::new(bases, vkeys.clone(), enc_keys.clone(), sk.clone(), nodes[0].get_own_idx(), sc.clone());
-            let (_, rx) =
+            let (tx, rx) =
                 run_protocol!(MixedBLSReceiver, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
-            // txs.push(tx);
+            txs.push(tx);
             rxs.push(rx);
         }
 
@@ -433,10 +456,8 @@ mod tests {
         let duration = Duration::from_millis(500);
         thread::sleep(duration);
 
-
-
         let params = MixedBLSSenderParams::new(bases, vkeys, enc_keys, sc.clone(), s);
-        let _ = run_protocol!(MixedBLSSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
+        let (stx,_) = run_protocol!(MixedBLSSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 
         for (i, rx) in rxs.iter_mut().enumerate() {
             match rx.recv().await {
@@ -450,7 +471,13 @@ mod tests {
                 None => assert!(false),
             }
         }
-        assert!(true)
+        shutdown!(stx, Shutdown);
+        for tx in txs.iter() {
+            shutdown!(tx, Shutdown);
+        }
+        for handle in handles {
+            handle.shutdown().await;
+        }
     }
     
 }
