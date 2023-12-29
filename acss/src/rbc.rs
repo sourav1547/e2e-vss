@@ -183,16 +183,15 @@ impl<B,P,F> RBCReceiver<B,P,F>
         loop {
             select! {
                 Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
-                    self.params.handle.unsubscribe::<EchoMsg>(&self.params.id).await;
-                    close_and_drain!(rx_echo);
                     self.params.handle.unsubscribe::<SendMsg<B,P>>(&self.params.id).await;
                     close_and_drain!(rx_send);
+                    self.params.handle.unsubscribe::<EchoMsg>(&self.params.id).await;
+                    close_and_drain!(rx_echo);
                     self.params.handle.unsubscribe::<ReadyMsg>(&self.params.id).await;
                     close_and_drain!(rx_ready);
                     close_and_drain!(self.params.rx);
 
                     self.params.handle.handle_stats_end().await;
-
                     shutdown_done!(tx_shutdown);
                 },
 
@@ -263,36 +262,27 @@ impl<B,P,F> RBCReceiver<B,P,F>
                             }
 
                             // Deliver and Terminate
+                            // TODO: Check if the node already received coms from the sender or not before returning ACSSDeliver
                             if *count >= 2 * self.params.node.get_threshold() + 1 {
-                                // TODO: Check if the node already received coms from the sender or not before returning ACSSDeliver
-                                self.params.handle.unsubscribe::<ReadyMsg>(&self.params.id).await;
-
-                                // Close everything
-                                self.params.handle.unsubscribe::<EchoMsg>(&self.params.id).await;
-                                close_and_drain!(rx_echo);
-                                self.params.handle.unsubscribe::<SendMsg<B,P>>(&self.params.id).await;
-                                close_and_drain!(rx_send);
-                                close_and_drain!(self.params.rx);
-
-
-                                self.params.handle.handle_stats_event("Output");
-                                self.params.handle.handle_stats_end().await;
-
                                 if bmsg.is_some() && pmsg.is_some() {
                                     let deliver = RBCDeliver::new(bmsg.unwrap(), pmsg.unwrap(), sender);
                                     self.params.tx.send(deliver).await.expect("Send to parent failed!");
+                                } else { 
+                                    panic! ("Bmsg None!"); 
                                 }
 
                                 // Close everything
-                                self.params.handle.unsubscribe::<EchoMsg>(&self.params.id).await;
-                                close_and_drain!(rx_echo);
                                 self.params.handle.unsubscribe::<SendMsg<B,P>>(&self.params.id).await;
                                 close_and_drain!(rx_send);
+                                self.params.handle.unsubscribe::<EchoMsg>(&self.params.id).await;
+                                close_and_drain!(rx_echo);
+                                self.params.handle.unsubscribe::<ReadyMsg>(&self.params.id).await;
+                                close_and_drain!(rx_ready);
                                 close_and_drain!(self.params.rx);
+
 
                                 self.params.handle.handle_stats_event("Output");
                                 self.params.handle.handle_stats_end().await;
-
                                 return;
                             }
                         }
@@ -323,7 +313,7 @@ mod tests {
     use network::message::Id;
     use protocol::run_protocol;
     use protocol::tests::generate_nodes;
-    use utils::tokio;
+    use utils::{tokio, shutdown};
     use crate::DST_PVSS_PUBLIC_PARAMS_GENERATION;
     
     use super::*;
@@ -334,21 +324,21 @@ mod tests {
         type B = Vec<G1Projective>;
         type P = Scalar;
         type F = Box<dyn Fn(&B, Option<&P>) -> bool + Send + Sync>;
-
-        
+       
         let seed = b"hello";
         let g = G1Projective::generator(); 
         let h = G1Projective::hash_to_curve(seed, DST_PVSS_PUBLIC_PARAMS_GENERATION.as_slice(), b"h");
 
-        let start = 10098;
-        let end = 10114; 
-        let n = end-start;
-        let t = n/3;
-        let pp = RBCParams::new(n as usize, t as usize);
+        let th: usize = 12;
+        let n = 3*th + 1;
+        let start: u16 = 10098;
+        let end = start + n as u16; 
+        
+        let pp = RBCParams::new(n, th);
 
-        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a Vec<blstrs::G1Projective>, Option<&'b Scalar>) -> bool + Send + Sync>> = Arc::new(Box::new(|a, b| true));
+        let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a Vec<blstrs::G1Projective>, Option<&'b Scalar>) -> bool + Send + Sync>> = Arc::new(Box::new(|_, _| true));
 
-        let (nodes, handles) = generate_nodes::<RBCParams>(start, end, t.into(), pp);
+        let (nodes, handles) = generate_nodes::<RBCParams>(start, end, th, pp);
         let n = nodes.len();
 
         // Creating dummy messaages
@@ -361,30 +351,37 @@ mod tests {
         let id = Id::default();
         let dst = "DST".to_string();
 
+        let mut txs = Vec::new();
         let mut rxs = Vec::new();
         for i in 0..n {
             let add_params = RBCReceiverParams::new(nodes[0].get_own_idx(), verify.clone());
-            let (_, rx) =
+            let (tx, rx) =
                 run_protocol!(RBCReceiver<B,P,F>, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
             rxs.push(rx);
+            txs.push(tx);
         }
 
         // Adding half second to start all the receivers, and starting the sender only after it.
         let duration = Duration::from_millis(500);
         thread::sleep(duration);
 
-        let params = RBCSenderParams::new(_bmsg, Some(pmsgs));
+        let params = RBCSenderParams::new(_bmsg.clone(), Some(pmsgs));
         let _ = run_protocol!(RBCSender<B,P>, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 
         for (_, rx) in rxs.iter_mut().enumerate() {
             match rx.recv().await {
                 Some(RBCDeliver { bmsg, .. }) => {
-                    assert!(bmsg.len() >0);
+                    assert_eq!(bmsg, _bmsg);
                 },
                 None => assert!(false),
             }
         }
-        assert!(true)
+        for tx in txs.iter() {
+            shutdown!(tx, Shutdown);
+        }
+        for handle in handles {
+            handle.shutdown().await;
+        }
     }
     
 }

@@ -3,13 +3,10 @@ extern crate core;
 use std::ops::Mul;
 use std::sync::Arc;
 use blstrs::{G1Projective, Scalar};
-use ff::Field;
-use group::GroupEncoding;
 use protocol::{Protocol, ProtocolParams, run_protocol};
 use rand::thread_rng;
 use utils::tokio;
 use sha3::{Shake128, digest::{Update, ExtendableOutput, XofReader}};
-use hex_literal::hex;
 
 use crate::random_scalar;
 use crate::rbc::{RBCSenderParams, RBCSender, RBCReceiverParams, RBCReceiver, RBCDeliver, RBCParams};
@@ -83,7 +80,7 @@ pub fn get_transcript(coms: Vec<G1Projective>, shares: &Vec<Share>, dk: Scalar, 
         }
         ctxts.push([s_ctxt, r_ctxt]);
     }
-    
+
     let ek = params.bases[0].mul(&dk);
     TranscriptYurek::new(coms, ek, ctxts)
 }
