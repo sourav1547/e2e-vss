@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::{thread, cmp};
 use aptos_bitvec::BitVec;
-use blstrs::{G1Projective, Scalar};
+use blstrs::G1Projective;
 use network::subscribe_msg;
 use protocol::{Protocol, ProtocolParams,run_protocol};
 use serde::{Serialize, Deserialize};

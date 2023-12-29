@@ -65,7 +65,7 @@ type F = Box<dyn Fn(&B, Option<&P>) -> bool + Send + Sync>;
 
 // This function outputs the Mixed-VSS transcript. 
 // This function assumes that all signatures are valid
-pub fn get_transcript(shares: &Vec<Share>, coms: &Vec<G1Projective>, signers: &Vec<bool>, sigs: Vec<bls12381::Signature>) -> TranscriptBLS {
+pub fn get_transcript(shares: &Vec<Share>, signers: &Vec<bool>, sigs: Vec<bls12381::Signature>) -> TranscriptBLS {
     let agg_sig = aggregate_sig(signers.clone(), sigs);
     let n = shares.len();
     let missing_count = n-agg_sig.get_num_voters();
@@ -208,7 +208,7 @@ impl LowBLSSender {
             }
         }
 
-        let t = get_transcript(&shares, &coms, &signers, sigs);
+        let t = get_transcript(&shares, &signers, sigs);
         let params = RBCSenderParams::new(t, None);
         let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), params);
 
