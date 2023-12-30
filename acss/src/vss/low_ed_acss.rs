@@ -159,13 +159,6 @@ impl LowEdSender {
                     self.params.handle.send(i, &self.params.id, &send_msg).await;
                 }
                 self.params.handle.handle_stats_end().await;
-            },
-            Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
-                self.params.handle.unsubscribe::<AckMsg>(&self.params.id).await;
-                close_and_drain!(rx_ack);
-                close_and_drain!(self.params.rx);
-                self.params.handle.handle_stats_end().await;
-                shutdown_done!(tx_shutdown);
             }
         }
 
@@ -198,23 +191,34 @@ impl LowEdSender {
                             }
                         }
                     }
+                },
+                Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
+                    self.params.handle.unsubscribe::<AckMsg>(&self.params.id).await;
+                    close_and_drain!(rx_ack);
+                    close_and_drain!(self.params.rx);
+                    self.params.handle.handle_stats_end().await;
+                    shutdown_done!(tx_shutdown);
                 }
             }
         }
 
-        let mut sigs = Vec::new();
-        for idx in 0..sc.n {
-            if sig_map.contains_key(&idx) {
-                sigs.push(sig_map.get(&idx).unwrap().clone())
+        let (tx_oneshot, rx_oneshot) = oneshot::channel();
+        let _ = thread::spawn(move || {
+            let mut sigs = Vec::new();
+            for idx in 0..sc.n {
+                if sig_map.contains_key(&idx) {
+                    sigs.push(sig_map.get(&idx).unwrap().clone())
+                }
+            }
+            let _ = tx_oneshot.send(get_transcript(&shares, &signers, sigs));
+        });
+
+        select! {
+            Ok(t) = rx_oneshot => {
+                let rbc_params = RBCSenderParams::new(t, None);
+                let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), rbc_params);
             }
         }
-
-        let t = get_transcript(&shares, &signers, sigs);
-        assert!(t.agg_sig().verify(root.as_slice(), &vks));
-
-        let rbc_params = RBCSenderParams::new(t, None);
-        let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), rbc_params);
-
     }
 }
 

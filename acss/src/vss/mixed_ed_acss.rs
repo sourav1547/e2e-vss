@@ -59,13 +59,10 @@ impl Protocol<RBCParams, MixedEdSenderParams, Shutdown, ()> for MixedEdSender {
     }
 }
 
-// type B = Vec<(usize, Ed25519Signature)>;
 type B = TranscriptMixedEd;
 type P = Share;
 type F = Box<dyn Fn(&TranscriptMixedEd, Option<&Share>) -> bool + Send + Sync>;
 
-// This function outputs the Mixed-VSS transcript. 
-// This function assumes that all signatures are valid
 // This function outputs the Mixed-VSS transcript. 
 // This function assumes that all signatures are valid
 pub fn get_transcript(coms: &Vec<G1Projective>, shares: &Vec<Share>, signers: &Vec<bool>, sigs: &Vec<Ed25519Signature>, params: &MixedEdSenderParams, th: usize) -> TranscriptMixedEd {
@@ -228,7 +225,7 @@ impl MixedEdSender {
                             signers[sender] = true;
                             sig_map.insert(sender, ack_msg.sig);
                             
-                            if sig_map.len() >= sc.t {
+                            if sig_map.len() >= sc.n-th {
                                 self.params.handle.unsubscribe::<AckMsg>(&self.params.id).await;
                                 close_and_drain!(rx_ack);
                                 self.params.handle.handle_stats_event("Enough sigs collected");

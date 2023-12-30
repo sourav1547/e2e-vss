@@ -207,21 +207,26 @@ impl LowBLSSender {
                             }
                         }
                     }
+                },
+                Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
+                    self.params.handle.unsubscribe::<AckMsg>(&self.params.id).await;
+                    close_and_drain!(rx_ack);
+                    close_and_drain!(self.params.rx);
+                    self.params.handle.handle_stats_end().await;
+                    shutdown_done!(tx_shutdown);
                 }
             }
         }
 
-        let t = get_transcript(&shares, &signers, sigs);
-        let params = RBCSenderParams::new(t, None);
-        let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), params);
+        let (tx_oneshot, rx_oneshot) = oneshot::channel();
+        let _ = thread::spawn(move || {
+            let _ = tx_oneshot.send(get_transcript(&shares, &signers, sigs));
+        });
 
         select! {
-            Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
-                self.params.handle.unsubscribe::<AckMsg>(&self.params.id).await;
-                close_and_drain!(rx_ack);
-                close_and_drain!(self.params.rx);
-                self.params.handle.handle_stats_end().await;
-                shutdown_done!(tx_shutdown);
+            Ok(t) = rx_oneshot => {
+                let params = RBCSenderParams::new(t, None);
+                let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), params);
             }
         }
 

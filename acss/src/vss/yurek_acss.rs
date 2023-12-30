@@ -1,10 +1,11 @@
 extern crate core;
 
-use std::ops::Mul;
+use std::{ops::Mul, thread};
 use std::sync::Arc;
 use blstrs::{G1Projective, Scalar};
 use protocol::{Protocol, ProtocolParams, run_protocol};
 use rand::thread_rng;
+use utils::tokio::sync::oneshot;
 use utils::{tokio::{self, select}, shutdown_done, close_and_drain};
 use sha3::{Shake128, digest::{Update, ExtendableOutput, XofReader}};
 
@@ -89,21 +90,26 @@ impl YurekSender {
     pub async fn run(&mut self) {
         self.params.handle.handle_stats_start("ACSS Sender");
         let YurekSenderParams{sc, s, bases, eks} = self.additional_params.take().expect("No additional params given!");
+        let (tx_oneshot, rx_oneshot) = oneshot::channel();
 
-        let dk = {  
-            let mut rng = thread_rng();
-            random_scalar(&mut rng)
-        };
-        let (coms, shares) = gen_coms_shares(&sc, &s, &bases);
-        let t = {
-            let params = YurekSenderParams{sc, s, bases, eks};
-            get_transcript(coms, &shares, dk, params)
-        };
-        
-        let rbc_params = RBCSenderParams::new(t, Some(shares));
-        let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), self.params.node.clone(), self.params.id.clone(), self.params.dst.clone(), rbc_params);
-
+        let _ = thread::spawn(move || {
+            let dk = {  
+                let mut rng = thread_rng();
+                random_scalar(&mut rng)
+            };
+            let (coms, shares) = gen_coms_shares(&sc, &s, &bases);
+            let t = {
+                let params = YurekSenderParams{sc, s, bases, eks};
+                get_transcript(coms, &shares, dk, params)
+            };
+            let _ = tx_oneshot.send((t, shares));
+        });
+      
         select! {
+            Ok((t, shares)) = rx_oneshot => {
+                let rbc_params = RBCSenderParams::new(t, Some(shares));
+                let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), self.params.node.clone(), self.params.id.clone(), self.params.dst.clone(), rbc_params);
+            },
             Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
                 close_and_drain!(self.params.rx);
                 self.params.handle.handle_stats_end().await;
