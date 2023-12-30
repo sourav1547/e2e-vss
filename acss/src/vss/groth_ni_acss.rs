@@ -4,6 +4,7 @@ use std::sync::Arc;
 use blstrs::{G1Projective, Scalar};
 use ff::Field;
 use protocol::{Protocol, ProtocolParams, run_protocol};
+use utils::{close_and_drain, shutdown_done};
 
 use crate::rbc::{RBCSenderParams, RBCSender, RBCReceiverParams, RBCReceiver, RBCDeliver, RBCParams};
 use crate::vss::keys::InputSecret;
@@ -13,7 +14,7 @@ use crate::vss::ni_vss::encryption::dec_chunks;
 use super::common::{Share, groth_deal};
 use super::messages::*;
 use super::transcript::TranscriptGroth;
-use utils::tokio;
+use utils::tokio::{self, select};
 
 #[derive(Clone)]
 pub struct GrothSenderParams {
@@ -61,11 +62,21 @@ impl GrothSender {
         let GrothSenderParams{sc, s, bases, eks} = self.additional_params.take().expect("No additional params given!");
 
         let node = self.params.node.clone();
-        let params = GrothSenderParams{sc, s, bases, eks};
-        let t = get_transcript(&params);
+        let t  = {
+            let params = GrothSenderParams{sc, s, bases, eks};
+            get_transcript(&params)
+        };
 
         let rbc_params = RBCSenderParams::new(t, None);
         let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), rbc_params);
+
+        select! {
+            Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
+                close_and_drain!(self.params.rx);
+                self.params.handle.handle_stats_end().await;
+                shutdown_done!(tx_shutdown);
+            }
+        }
     }
 }
 
@@ -122,19 +133,26 @@ impl GrothReceiver {
         let rbc_params = RBCReceiverParams::new(sender, verify);
         let (_, mut rx) = run_protocol!(RBCReceiver<B, P, F>, self.params.handle.clone(), node.clone(), self.params.id.clone(), self.params.dst.clone(), rbc_params);
 
-        
-        match rx.recv().await {
-            Some(RBCDeliver {bmsg, .. }) => {
-
-                let secret = dec_chunks(&bmsg.ciphertext, dk_clone, node.get_own_idx().clone());
-                let share = Share{share: [secret, Scalar::zero()]};
-                let coms = bmsg.coms();
-
-                let deliver = ACSSDeliver::new(share, coms.clone(), sender);
-                self.params.tx.send(deliver).await.expect("Send to parent failed!");
-                return
-            },
-            None => assert!(false),
+        loop {
+            select! {
+                Some(RBCDeliver {bmsg, .. })  = rx.recv() => {
+                    let secret = dec_chunks(&bmsg.ciphertext, dk_clone, node.get_own_idx().clone());
+                    let share = Share{share: [secret, Scalar::zero()]};
+                    let coms = bmsg.coms();
+    
+                    let deliver = ACSSDeliver::new(share, coms.clone(), sender);
+                    self.params.tx.send(deliver).await.expect("Send to parent failed!");
+                    
+                    close_and_drain!(self.params.rx);
+                    self.params.handle.handle_stats_end().await;
+                    return
+                },
+                Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
+                    close_and_drain!(self.params.rx);
+                    self.params.handle.handle_stats_end().await;
+                    shutdown_done!(tx_shutdown);
+                }
+            }
         }
     }
 }
@@ -150,7 +168,7 @@ mod tests {
     use network::message::Id;
     use protocol::run_protocol;
     use protocol::tests::generate_nodes;
-    use utils::tokio;
+    use utils::{tokio, shutdown};
     use crate::vss::common::low_deg_test;
     use crate::{DST_PVSS_PUBLIC_PARAMS_GENERATION, random_scalars};
     use crate::pvss::SharingConfiguration;
@@ -188,11 +206,13 @@ mod tests {
         let id = Id::default();
         let dst = "DST".to_string();
 
+        let mut txs = Vec::new();
         let mut rxs = Vec::new();
         for i in 0..n {
             let add_params = GrothReceiverParams::new(bases, enc_keys.clone(), nodes[0].get_own_idx(), dec_keys[i], sc.clone());
-            let (_, rx) =
+            let (tx, rx) =
                 run_protocol!(GrothReceiver, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
+            txs.push(tx);
             rxs.push(rx);
         }
 
@@ -201,12 +221,12 @@ mod tests {
         thread::sleep(duration);
 
         let params = GrothSenderParams::new(sc.clone(), s, bases, enc_keys);
-        let _ = run_protocol!(GrothSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
+        let (stx, _) = run_protocol!(GrothSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 
         // let mut points = Vec::new();
-        for (i, rx) in rxs.iter_mut().enumerate() {
+        for (_, rx) in rxs.iter_mut().enumerate() {
             match rx.recv().await {
-                Some(ACSSDeliver { y, coms, .. }) => {
+                Some(ACSSDeliver { coms, .. }) => {
                     assert!(coms.len() == n);
                     // let com: G1Projective = coms[nodes[i].get_own_idx()];
                     // let e_com = G1Projective::multi_exp(&bases, &y.share);
@@ -216,7 +236,13 @@ mod tests {
                 None => assert!(false),
             }
         }
-        assert!(true)
+        shutdown!(stx, Shutdown);
+        for tx in txs.iter() {
+            shutdown!(tx, Shutdown);
+        }
+        for handle in handles {
+            handle.shutdown().await;
+        }
     }
     
 }

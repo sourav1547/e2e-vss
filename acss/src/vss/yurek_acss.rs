@@ -147,21 +147,22 @@ impl YurekReceiver {
         let YurekReceiverParams{bases, sender, sc, ..} = self.additional_params.take().expect("No additional params!");
         self.params.handle.handle_stats_start(format!("ACSS Receiver {}", sender));
 
-
         let node = self.params.node.clone();
+        let self_idx = node.get_own_idx();
 
-        let node_clone = self.params.node.clone();
         let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a B, Option<&'b P>) -> bool + Send + Sync>> = Arc::new(Box::new(move |t, share| {
             if share.is_none() {
                 return false
             }
-            let com: G1Projective = t.coms[node_clone.get_own_idx()];
+            let com: G1Projective = t.coms[self_idx];
             let e_com = G1Projective::multi_exp(&bases, &share.unwrap().share);
             com.eq(&e_com) && low_deg_test(&t.coms, &sc)
         }));
 
-        let add_params = RBCReceiverParams::new(sender, verify);
-        let (_, mut rx) = run_protocol!(RBCReceiver<B, P, F>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), add_params);
+        let (_, mut rx) = {
+            let rbc_params = RBCReceiverParams::new(sender, verify);
+            run_protocol!(RBCReceiver<B, P, F>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), rbc_params)
+        };
 
 
         loop {

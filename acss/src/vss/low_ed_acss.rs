@@ -10,7 +10,6 @@ use network::subscribe_msg;
 use protocol::{Protocol, ProtocolParams,run_protocol};
 use rand::thread_rng;
 use sha2::{Digest, Sha256};
-use utils::tokio::sync::mpsc;
 use utils::{close_and_drain, shutdown_done};
 use utils::tokio;
 

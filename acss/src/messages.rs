@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use network::tokio::sync::oneshot;
 
-use crate::{G1Projective, Scalar};
-
 pub struct Shutdown(pub oneshot::Sender<()>);
 
 #[derive(Serialize, Deserialize, Clone)]

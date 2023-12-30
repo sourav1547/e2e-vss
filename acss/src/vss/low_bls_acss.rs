@@ -229,7 +229,7 @@ impl LowBLSSender {
 }
 
 #[derive(Clone)]
-pub struct LowEdReceiverParams {
+pub struct LowBLSReceiverParams {
     pub bases : [G1Projective; 2],
     pub mpk : Vec<PublicKey>,
     pub sk : PrivateKey,
@@ -237,30 +237,30 @@ pub struct LowEdReceiverParams {
     pub sc: SharingConfiguration,
 }
 
-impl LowEdReceiverParams {
+impl LowBLSReceiverParams {
     pub fn new(bases: [G1Projective;2], mpk: Vec<PublicKey>, sk: PrivateKey, sender: usize, sc: SharingConfiguration) -> Self {
         Self { bases, mpk, sk, sender, sc }
     }
 }
 
-pub struct LowEdReceiver {
+pub struct LowBLSReceiver {
     params: ProtocolParams<RBCParams, Shutdown, ACSSDeliver>,
-    additional_params: Option<LowEdReceiverParams>
+    additional_params: Option<LowBLSReceiverParams>
 }
 
-impl Protocol<RBCParams, LowEdReceiverParams, Shutdown, ACSSDeliver> for LowEdReceiver {
+impl Protocol<RBCParams, LowBLSReceiverParams, Shutdown, ACSSDeliver> for LowBLSReceiver {
     fn new(params: ProtocolParams<RBCParams, Shutdown, ACSSDeliver>) -> Self {
         Self { params, additional_params: None }
     }
 
-    fn additional_params(&mut self, params: LowEdReceiverParams) {
+    fn additional_params(&mut self, params: LowBLSReceiverParams) {
         self.additional_params = Some(params)
     }
 }
 
-impl LowEdReceiver {
+impl LowBLSReceiver {
     pub async fn run(&mut self) {
-        let LowEdReceiverParams{bases, mpk, sk, sender, sc} = self.additional_params.take().expect("No additional params!");
+        let LowBLSReceiverParams{bases, mpk, sk, sender, sc} = self.additional_params.take().expect("No additional params!");
         self.params.handle.handle_stats_start(format!("ACSS Receiver {}", sender));
 
         // TODO: We can even make this verify function optional
@@ -388,9 +388,9 @@ mod tests {
         let mut rxs = Vec::new();
         for i in 0..n {
             let sk = &keys[i].private_key;
-            let add_params = LowEdReceiverParams::new(bases, vkeys.clone(), sk.clone(), nodes[0].get_own_idx(), sc.clone());
+            let add_params = LowBLSReceiverParams::new(bases, vkeys.clone(), sk.clone(), nodes[0].get_own_idx(), sc.clone());
             let (tx, rx) =
-                run_protocol!(LowEdReceiver, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
+                run_protocol!(LowBLSReceiver, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
             txs.push(tx);
             rxs.push(rx);
         }
