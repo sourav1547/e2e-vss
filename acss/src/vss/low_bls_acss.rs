@@ -272,7 +272,11 @@ impl LowEdReceiver {
 
         
         let mut rx_share = subscribe_msg!(self.params.handle, &self.params.id, ShareMsg);
-        let (tx_oneshot, rx_oneshot) = oneshot::channel();
+
+        let mut maybe_coms = None;
+        let mut maybe_share = None;
+        let mut maybe_bmsg = None;
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(10));
         
         loop {
             select! {
@@ -294,44 +298,41 @@ impl LowEdReceiver {
                                 let ack = AckMsg::new(sig);
                                 self.params.handle.send(sender, &self.params.id, &ack).await;
 
-                                let _ = thread::spawn(move || {
-                                    let _ = tx_oneshot.send((share_msg.coms, share_msg.share));
-                                });
+                                maybe_coms = Some(share_msg.coms);
+                                maybe_share = Some(share_msg.share);
                                 
                                 self.params.handle.unsubscribe::<ShareMsg>(&self.params.id).await;
                                 close_and_drain!(rx_share);
                                 self.params.handle.handle_stats_event("After sending ack");
-                                
-                                break
                             }
                         }
                     }
                 }
-            }
-        }
-        
-        match rx.recv().await {
-            Some(RBCDeliver {bmsg, .. }) => {
-                select! {
-                    Ok((coms, share)) = rx_oneshot => {
-                        if verify_transcript(&coms, &bmsg, &sc, &bases, &mpk){
-                            let deliver = ACSSDeliver::new(share, coms, sender);
+                Some(RBCDeliver { bmsg, .. }) = rx.recv() => {
+                    maybe_bmsg = Some(bmsg);
+                }
+                _ = interval.tick() => {
+                    if let (Some(coms), Some(share), Some(bmsg)) = (&maybe_coms, &maybe_share, &maybe_bmsg) {
+                        if verify_transcript(coms, bmsg, &sc, &bases, &mpk) {
+                            let deliver = ACSSDeliver::new(share.clone(), coms.clone(), sender);
                             self.params.tx.send(deliver).await.expect("Send to parent failed!");
+
+                            self.params.handle.unsubscribe::<ShareMsg>(&self.params.id).await;
+                            close_and_drain!(rx_share);
+                            close_and_drain!(self.params.rx);
+                            self.params.handle.handle_stats_end().await;
+
+                            return;
                         }
                     }
+                },
+                Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
+                    self.params.handle.unsubscribe::<ShareMsg>(&self.params.id).await;
+                    close_and_drain!(rx_share);
+                    close_and_drain!(self.params.rx);
+                    self.params.handle.handle_stats_end().await;
+                    shutdown_done!(tx_shutdown);
                 }
-                return
-            },
-            None => assert!(false),
-        }
-
-        select! {
-            Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
-                self.params.handle.unsubscribe::<ShareMsg>(&self.params.id).await;
-                close_and_drain!(rx_share);
-                close_and_drain!(self.params.rx);
-                self.params.handle.handle_stats_end().await;
-                shutdown_done!(tx_shutdown);
             }
         }
     }

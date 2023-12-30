@@ -163,25 +163,24 @@ impl YurekReceiver {
         let add_params = RBCReceiverParams::new(sender, verify);
         let (_, mut rx) = run_protocol!(RBCReceiver<B, P, F>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), add_params);
 
-        match rx.recv().await {
-            Some(RBCDeliver { bmsg, pmsg, .. }) => {
-                if let Some(pmsg) = pmsg {
-                    let deliver = ACSSDeliver::new(pmsg, bmsg.coms, sender);
-                    self.params.tx.send(deliver).await.expect("Send to parent failed!");
 
+        loop {
+            select! {
+                Some(RBCDeliver { bmsg, pmsg, .. }) = rx.recv() => {
+                    if let Some(pmsg) = pmsg {
+                        let deliver = ACSSDeliver::new(pmsg, bmsg.coms, sender);
+                        self.params.tx.send(deliver).await.expect("Send to parent failed!");
+
+                        close_and_drain!(self.params.rx);
+                        self.params.handle.handle_stats_end().await;
+                        return
+                    }
+                },
+                Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
                     close_and_drain!(self.params.rx);
                     self.params.handle.handle_stats_end().await;
-                    return
+                    shutdown_done!(tx_shutdown);
                 }
-            },
-            None => assert!(false),
-        }
-
-        select! {
-            Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
-                close_and_drain!(self.params.rx);
-                self.params.handle.handle_stats_end().await;
-                shutdown_done!(tx_shutdown);
             }
         }
     }

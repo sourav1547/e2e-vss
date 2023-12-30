@@ -263,8 +263,6 @@ impl LowEdReceiver {
         let (_, mut rx) = run_protocol!(RBCReceiver<B, P, F>, self.params.handle.clone(), self.params.node.clone(), self.params.id.clone(), self.params.dst.clone(), rbc_params);
         
         let mut rx_share = subscribe_msg!(self.params.handle, &self.params.id, ShareMsg);
-        // let (tx_oneshot, rx_oneshot) = mpsc::channel(network::network::CHANNEL_LIMIT);
-        // oneshot::channel();
 
         let mut maybe_coms = None;
         let mut maybe_share = None;
@@ -301,13 +299,12 @@ impl LowEdReceiver {
                         }
                     }
                 }
-                Some(msg) = rx.recv() => {
-                    let RBCDeliver { bmsg, .. } = msg;
+                Some(RBCDeliver { bmsg, .. }) = rx.recv() => {
                     maybe_bmsg = Some(bmsg);
                 }
                 _ = interval.tick() => {
                     if let (Some(coms), Some(share), Some(bmsg)) = (&maybe_coms, &maybe_share, &maybe_bmsg) {
-                        if verify_transcript(&coms, &bmsg, &sc, &bases, &mpk) {
+                        if verify_transcript(coms, bmsg, &sc, &bases, &mpk) {
                             let deliver = ACSSDeliver::new(share.clone(), coms.clone(), sender);
                             self.params.tx.send(deliver).await.expect("Send to parent failed!");
 
