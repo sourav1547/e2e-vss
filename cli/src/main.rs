@@ -133,10 +133,12 @@ enum Commands {
 
         #[clap(short, long)]
         deg: usize,
-        
-        // Wait time before broadcasting the RBC message
+
         #[clap(short, long)]
-        wait: usize,
+        prg: usize, // Pseudorandom seed for generating keys
+        
+        #[clap(short, long)]
+        wait: usize, // Wait time before broadcasting the RBC message
     }
 }
 
@@ -200,7 +202,7 @@ fn main() -> Result<()> {
             }
             Ok(())
         }
-        Commands::Run { config, tokio_threads, rayon_threads, stats, acss_type, deg, wait } => {
+        Commands::Run { config, tokio_threads, rayon_threads, stats, acss_type, deg, prg, wait } => {
             let err_string = format!("Can't open config file! {:#?}", config);
             let mut reader = File::open(config).expect(&err_string);
             let NodeWithGens{node, g, h} = bincode::deserialize_from(&mut reader).expect("Can't deserialize config!");

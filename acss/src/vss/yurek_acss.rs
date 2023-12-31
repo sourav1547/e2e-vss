@@ -90,7 +90,7 @@ impl YurekSender {
     pub async fn run(&mut self) {
         self.params.handle.handle_stats_start("ACSS Sender");
         let YurekSenderParams{sc, s, bases, eks} = self.additional_params.take().expect("No additional params given!");
-        let (tx_oneshot, rx_oneshot) = oneshot::channel();
+        let (tx_one, rx_one) = oneshot::channel();
 
         let _ = thread::spawn(move || {
             let dk = {  
@@ -102,11 +102,11 @@ impl YurekSender {
                 let params = YurekSenderParams{sc, s, bases, eks};
                 get_transcript(coms, &shares, dk, params)
             };
-            let _ = tx_oneshot.send((t, shares));
+            let _ = tx_one.send((t, shares));
         });
       
         select! {
-            Ok((t, shares)) = rx_oneshot => {
+            Ok((t, shares)) = rx_one => {
                 let rbc_params = RBCSenderParams::new(t, Some(shares));
                 let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), self.params.node.clone(), self.params.id.clone(), self.params.dst.clone(), rbc_params);
             },

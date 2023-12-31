@@ -1,9 +1,11 @@
 extern crate core;
 
 use std::sync::Arc;
+use std::thread;
 use blstrs::{G1Projective, Scalar};
 use ff::Field;
 use protocol::{Protocol, ProtocolParams, run_protocol};
+use utils::tokio::sync::oneshot;
 use utils::{close_and_drain, shutdown_done};
 
 use crate::rbc::{RBCSenderParams, RBCSender, RBCReceiverParams, RBCReceiver, RBCDeliver, RBCParams};
@@ -58,19 +60,19 @@ pub fn get_transcript(params: &GrothSenderParams) -> TranscriptGroth {
 impl GrothSender {
     pub async fn run(&mut self) {
         self.params.handle.handle_stats_start("ACSS Sender");
-
         let GrothSenderParams{sc, s, bases, eks} = self.additional_params.take().expect("No additional params given!");
+        let (tx_one, rx_one) = oneshot::channel();
 
-        let node = self.params.node.clone();
-        let t  = {
-            let params = GrothSenderParams{sc, s, bases, eks};
-            get_transcript(&params)
-        };
-
-        let rbc_params = RBCSenderParams::new(t, None);
-        let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), rbc_params);
+        let _ = thread::spawn(move || {
+            let params = GrothSenderParams{sc, s, bases, eks};    
+            let _ = tx_one.send(get_transcript(&params));
+        });
 
         select! {
+            Ok(t) = rx_one => {
+                let rbc_params = RBCSenderParams::new(t, None);
+                let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), self.params.node.clone(), self.params.id.clone(), self.params.dst.clone(), rbc_params);
+            },
             Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
                 close_and_drain!(self.params.rx);
                 self.params.handle.handle_stats_end().await;
@@ -138,9 +140,8 @@ impl GrothReceiver {
                 Some(RBCDeliver {bmsg, .. })  = rx.recv() => {
                     let secret = dec_chunks(&bmsg.ciphertext, dk_clone, node.get_own_idx().clone());
                     let share = Share{share: [secret, Scalar::zero()]};
-                    let coms = bmsg.coms();
     
-                    let deliver = ACSSDeliver::new(share, coms.clone(), sender);
+                    let deliver = ACSSDeliver::new(share, bmsg.coms().clone(), sender);
                     self.params.tx.send(deliver).await.expect("Send to parent failed!");
                     
                     close_and_drain!(self.params.rx);

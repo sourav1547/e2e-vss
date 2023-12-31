@@ -144,16 +144,16 @@ impl LowEdSender {
 
         let node = self.params.node.clone();
         let (coms, shares) = gen_coms_shares(&sc, &s, &bases);
-        let (tx_oneshot, rx_oneshot) = oneshot::channel();
+        let (tx_one, rx_one) = oneshot::channel();
 
         let coms_clone = coms.clone();
         let shares_clone = shares.clone();
         let _ = thread::spawn(move || {
-            let _ = tx_oneshot.send((coms_clone, shares_clone));
+            let _ = tx_one.send((coms_clone, shares_clone));
         });
 
         select! {
-            Ok((bmsg, pmsg)) = rx_oneshot => {
+            Ok((bmsg, pmsg)) = rx_one => {
                 for (i, y_s) in pmsg.iter().enumerate() {
                     let send_msg = ShareMsg::new(bmsg.clone(), y_s.clone());
                     self.params.handle.send(i, &self.params.id, &send_msg).await;
@@ -202,7 +202,7 @@ impl LowEdSender {
             }
         }
 
-        let (tx_oneshot, rx_oneshot) = oneshot::channel();
+        let (tx_one, rx_one) = oneshot::channel();
         let _ = thread::spawn(move || {
             let mut sigs = Vec::new();
             for idx in 0..sc.n {
@@ -210,11 +210,11 @@ impl LowEdSender {
                     sigs.push(sig_map.get(&idx).unwrap().clone())
                 }
             }
-            let _ = tx_oneshot.send(get_transcript(&shares, &signers, sigs));
+            let _ = tx_one.send(get_transcript(&shares, &signers, sigs));
         });
 
         select! {
-            Ok(t) = rx_oneshot => {
+            Ok(t) = rx_one => {
                 let rbc_params = RBCSenderParams::new(t, None);
                 let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), rbc_params);
             }

@@ -10,6 +10,7 @@ use serde::{Serialize, Deserialize};
 use crate::{evaluation_domain::BatchEvaluationDomain, lagrange::all_lagrange_denominators, random_scalars, fft::{fft_assign, fft}, pvss::SharingConfiguration, vss::ni_vss::dealing::create_dealing};
 
 use super::{keys::InputSecret, ni_vss::{encryption::CiphertextChunks, nizk_chunking::ProofChunking, nizk_sharing::ProofSharing}};
+use aptos_crypto::bls12381::{PrivateKey, PublicKey};
 
 
 /// Return a random scalar within a small range [0,n) 
@@ -133,7 +134,7 @@ pub fn generate_ed_sig_keys(n: usize) -> Vec<KeyPair<Ed25519PrivateKey, Ed25519P
         .collect()
 }
 
-use aptos_crypto::bls12381::{PrivateKey, PublicKey};
+
 // Helper function to generate N bls12381 private keys.
 pub fn generate_bls_sig_keys(n: usize) -> Vec<KeyPair<PrivateKey, PublicKey>> {
     let mut rng = StdRng::from_seed(TEST_SEED);

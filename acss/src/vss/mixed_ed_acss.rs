@@ -182,25 +182,21 @@ impl MixedEdSender {
         let MixedEdSenderParams{bases, vks, eks, sc, s} = self.additional_params.take().expect("No additional params given!");
         let node = self.params.node.clone();
         let (coms, shares) = gen_coms_shares(&sc, &s, &bases);
-        let (tx_oneshot, rx_oneshot) = oneshot::channel();
+        let (tx_one, rx_one) = oneshot::channel();
 
         let coms_clone = coms.clone();
         let shares_clone = shares.clone();
         let _ = thread::spawn(move || {
-            let _ = tx_oneshot.send((coms_clone, shares_clone));
+            let _ = tx_one.send((coms_clone, shares_clone));
         });
 
         select! {
-            Ok((bmsg, pmsg)) = rx_oneshot => {
+            Ok((bmsg, pmsg)) = rx_one => {
                 for (i, y_s) in pmsg.iter().enumerate() {
                     let send_msg = ShareMsg::new(bmsg.clone(), y_s.clone());
                     self.params.handle.send(i, &self.params.id, &send_msg).await;
                 }
                 self.params.handle.handle_stats_end().await;
-            },
-            Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
-                self.params.handle.handle_stats_end().await;
-                shutdown_done!(tx_shutdown);
             }
         }
 
@@ -233,32 +229,32 @@ impl MixedEdSender {
                             }
                         }
                     }
+                },
+                Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
+                    self.params.handle.unsubscribe::<AckMsg>(&self.params.id).await;
+                    close_and_drain!(rx_ack);
+                    self.params.handle.handle_stats_end().await;
+                    shutdown_done!(tx_shutdown);
                 }
             }
         }
 
-        let t = {
+        let (tx_one, rx_one) = oneshot::channel();
+        let _ = thread::spawn(move || {
             let mut sigs = Vec::new();
             for idx in 0..sc.n {
                 if sig_map.contains_key(&idx) {
                     sigs.push(sig_map.get(&idx).unwrap().clone())
                 }
             }
-            
             let params = MixedEdSenderParams { bases, vks, eks, sc, s };
-            get_transcript(&coms,&shares, &signers, &sigs, &params, th)
-        };
-
-        let rbc_params = RBCSenderParams::new(t, None);
-        let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), rbc_params);
-
+            let _ = tx_one.send(get_transcript(&coms,&shares, &signers, &sigs, &params, th));
+        });
 
         select! {
-            Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
-                self.params.handle.unsubscribe::<AckMsg>(&self.params.id).await;
-                close_and_drain!(rx_ack);
-                self.params.handle.handle_stats_end().await;
-                shutdown_done!(tx_shutdown);
+            Ok(t) = rx_one => {
+                let rbc_params = RBCSenderParams::new(t, None);
+                let _ = run_protocol!(RBCSender<B, P>, self.params.handle.clone(), node, self.params.id.clone(), self.params.dst.clone(), rbc_params);
             }
         }
     }

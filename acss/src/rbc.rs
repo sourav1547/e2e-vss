@@ -90,14 +90,14 @@ impl<B,P> RBCSender<B,P>
 
         let RBCSenderParams{bmsg, pmsg} = self.additional_params.take().expect("No additional params given!");
 
-        let (tx_oneshot, rx_oneshot) = oneshot::channel();
+        let (tx_one, rx_one) = oneshot::channel();
 
         let _ = thread::spawn(move || {
-            let _ = tx_oneshot.send((bmsg, pmsg));
+            let _ = tx_one.send((bmsg, pmsg));
         });
 
         select! {
-            Ok((bmsg, pmsg)) = rx_oneshot => {
+            Ok((bmsg, pmsg)) = rx_one => {
                 let pmsg_vec = pmsg.map_or_else(|| vec![None; self.params.node.get_num_nodes()], |vec| vec.into_iter().map(Some).collect());
 
                 assert_eq!(self.params.node.get_num_nodes(), pmsg_vec.len());

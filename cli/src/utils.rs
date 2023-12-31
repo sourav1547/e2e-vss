@@ -5,9 +5,11 @@ use acss::vss::common::{generate_ed_sig_keys, generate_bls_sig_keys};
 use aptos_crypto::bls12381::{PublicKey, PrivateKey};
 use aptos_crypto::ed25519::{Ed25519PublicKey, Ed25519PrivateKey};
 use aptos_crypto::multi_ed25519::MultiEd25519PublicKey;
-use aptos_crypto::test_utils::KeyPair;
+use aptos_crypto::test_utils::{KeyPair, TEST_SEED};
 use blstrs::{G1Projective, Scalar};
+use rand::rngs::StdRng;
 use rand::thread_rng;
+use rand_core::SeedableRng;
 
 pub fn yurek_params(n: usize, bases: [G1Projective; 2]) -> Vec<G1Projective> {
     let dkeys = {
@@ -43,14 +45,14 @@ pub fn mixed_ed_params(sc: &SharingConfiguration, bases: &[G1Projective], idx:us
     Vec<G1Projective>,
 ) {
     let n = sc.get_total_num_players();
-    let deg = sc.get_threshold();
+    let deg = sc.get_threshold()-1;
 
     let keys = generate_ed_sig_keys(n);
-    let ver_keys = keys.iter().map(|x| x.public_key.clone()).collect::<Vec<Ed25519PublicKey>>();
-    let mpk = MultiEd25519PublicKey::new(ver_keys, deg+1).unwrap();
+    let vkeys = keys.iter().map(|x| x.public_key.clone()).collect::<Vec<Ed25519PublicKey>>();
+    let mpk = MultiEd25519PublicKey::new(vkeys, deg+1).unwrap();
 
     let dec_keys = {
-        let mut rng = thread_rng();
+        let mut rng = StdRng::from_seed(TEST_SEED);
         random_scalars(n, &mut rng)
     };
     let enc_keys = dec_keys.iter().map(|x| bases[0].mul(x)).collect::<Vec<_>>();
@@ -68,7 +70,7 @@ pub fn mixed_bls_params(sc: &SharingConfiguration, bases: &[G1Projective], idx: 
     let vkeys = keys.iter().map(|x| x.public_key.clone()).collect::<Vec<PublicKey>>();
 
     let dec_keys = {
-        let mut rng = thread_rng();
+        let mut rng = StdRng::from_seed(TEST_SEED);
         random_scalars(n, &mut rng)
     };
     let enc_keys = dec_keys.iter().map(|x| bases[0].mul(x)).collect::<Vec<_>>();
@@ -83,7 +85,7 @@ pub fn groth_params(sc: &SharingConfiguration, bases: &[G1Projective], idx: usiz
 ) {
     let n = sc.get_total_num_players();
     let dkeys = {
-        let mut rng = thread_rng();
+        let mut rng = StdRng::from_seed(TEST_SEED);
         random_scalars(n, &mut rng)
     };
     let ekeys = dkeys.iter().map(|x| bases[0].mul(x)).collect::<Vec<_>>();
