@@ -14,7 +14,7 @@ use utils::tokio;
 use tokio::select;
 use tokio::sync::oneshot;
 use aptos_crypto::Signature;
-use aptos_crypto::ed25519::{Ed25519PrivateKey, Ed25519Signature};
+use aptos_crypto::ed25519::{Ed25519PrivateKey, Ed25519Signature, Ed25519PublicKey};
 use aptos_crypto::multi_ed25519::{MultiEd25519PublicKey, MultiEd25519Signature};
 
 use crate::rbc::{RBCSenderParams, RBCSender, RBCReceiverParams, RBCReceiver, RBCDeliver, RBCParams};
@@ -34,7 +34,7 @@ use super::transcript::TranscriptMixedEd;
 #[derive(Clone)]
 pub struct MixedEdSenderParams {
     pub bases: [G1Projective; 2],
-    pub vks : MultiEd25519PublicKey,
+    pub vkeys : Vec<Ed25519PublicKey>,
     pub eks: Vec<G1Projective>,
     pub sc: SharingConfiguration, 
     pub s: InputSecret,
@@ -44,13 +44,13 @@ pub struct MixedEdSenderParams {
 impl MixedEdSenderParams {
     pub fn new(
         bases: [G1Projective; 2], 
-        vks: MultiEd25519PublicKey, 
+        vkeys: Vec<Ed25519PublicKey>, 
         eks: Vec<G1Projective>, 
         sc: SharingConfiguration, 
         s: InputSecret, 
         wait: usize
     ) -> Self {
-        Self { bases, vks, eks, sc, s, wait }
+        Self { bases, vkeys, eks, sc, s, wait }
     }
 }
 pub struct MixedEdSender {
@@ -150,9 +150,11 @@ pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptMixedEd, params
     hasher.update(bcs::to_bytes(coms).unwrap());
     let root: [u8; 32] = hasher.finalize().into();
 
-    let missing_count = n-agg_sig.get_num_voters();
+    let num_signed = agg_sig.get_num_voters();
+    let missing_count = n-num_signed;
+    let mpk = MultiEd25519PublicKey::new(params.vkeys.to_vec(), num_signed).unwrap();
     if missing_count == 0 {
-        return agg_sig.verify(root.as_slice(), &params.mpk)
+        return agg_sig.verify(root.as_slice(), &mpk)
     }
 
     let TranscriptVE{ciphertext, chunk_pf, r_bb, enc_rr, share_pf} = t_ve.unwrap();
@@ -191,7 +193,7 @@ pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptMixedEd, params
 
     // FIXME: As of now this assert will fail if the randomness vector is non-zero
     let h = params.bases[1];
-    agg_sig.verify(root.as_slice(), &params.mpk) && verify_dealing(&h, &enc_coms, &enc_keys, &ciphertext, &chunk_pf, &r_bb, &enc_rr, &share_pf)
+    agg_sig.verify(root.as_slice(), &mpk) && verify_dealing(&h, &enc_coms, &enc_keys, &ciphertext, &chunk_pf, &r_bb, &enc_rr, &share_pf)
 
 }
 
@@ -201,7 +203,7 @@ impl MixedEdSender {
         let th = self.params.node.get_threshold();
         let mut rx_ack = subscribe_msg!(self.params.handle, &self.params.id, AckMsg);
 
-        let MixedEdSenderParams{bases, vks, eks, sc, s, wait} = self.additional_params.take().expect("No additional params given!");
+        let MixedEdSenderParams{bases, vkeys, eks, sc, s, wait} = self.additional_params.take().expect("No additional params given!");
         let node = self.params.node.clone();
         let (coms, shares) = gen_coms_shares(&sc, &s, &bases);
         let (tx_one, rx_one) = oneshot::channel();
@@ -226,7 +228,6 @@ impl MixedEdSender {
         }
 
         // Handling ack messages
-        let public_keys = vks.public_keys();
         let mut signers = vec![false; sc.n];
         let mut sig_map: HashMap<usize, Ed25519Signature> = HashMap::new();
         
@@ -242,7 +243,7 @@ impl MixedEdSender {
                     if signers[sender] {continue}
 
                     if let Ok(ack_msg) = msg.get_content::<AckMsg>() {
-                        if ack_msg.sig.verify_arbitrary_msg(root.as_slice(), &public_keys[sender]).is_ok() {       
+                        if ack_msg.sig.verify_arbitrary_msg(root.as_slice(), &vkeys[sender]).is_ok() {       
                             signers[sender] = true;
                             sig_map.insert(sender, ack_msg.sig);
                             
@@ -273,7 +274,7 @@ impl MixedEdSender {
                     sigs.push(sig_map.get(&idx).unwrap().clone())
                 }
             }
-            let params = MixedEdSenderParams { bases, vks, eks, sc, s, wait };
+            let params = MixedEdSenderParams { bases, vkeys, eks, sc, s, wait };
             let _ = tx_one.send(get_transcript(&coms,&shares, &signers, &sigs, &params, th));
         });
 
@@ -289,7 +290,7 @@ impl MixedEdSender {
 #[derive(Clone)]
 pub struct MixedEdReceiverParams {
     pub bases : [G1Projective; 2],
-    pub mpk : MultiEd25519PublicKey,
+    pub vkeys : Vec<Ed25519PublicKey>,
     pub eks: Vec<G1Projective>,
     pub sk : Ed25519PrivateKey,
     pub sender: usize,
@@ -297,8 +298,8 @@ pub struct MixedEdReceiverParams {
 }
 
 impl MixedEdReceiverParams {
-    pub fn new(bases: [G1Projective;2], mpk: MultiEd25519PublicKey, eks: Vec<G1Projective>, sk: Ed25519PrivateKey, sender: usize, sc: SharingConfiguration) -> Self {
-        Self { bases, mpk, eks, sk, sender, sc }
+    pub fn new(bases: [G1Projective;2], vkeys: Vec<Ed25519PublicKey>, eks: Vec<G1Projective>, sk: Ed25519PrivateKey, sender: usize, sc: SharingConfiguration) -> Self {
+        Self { bases, vkeys, eks, sk, sender, sc }
     }
 }
 
@@ -319,7 +320,7 @@ impl Protocol<RBCParams, MixedEdReceiverParams, Shutdown, ACSSDeliver> for Mixed
 
 impl MixedEdReceiver {
     pub async fn run(&mut self) {
-        let MixedEdReceiverParams{bases, mpk, eks, sk, sender, sc} = self.additional_params.take().expect("No additional params!");
+        let MixedEdReceiverParams{bases, vkeys, eks, sk, sender, sc} = self.additional_params.take().expect("No additional params!");
         self.params.handle.handle_stats_start(format!("ACSS Receiver {}", sender));
 
         let verify: Arc<Box<dyn for<'a, 'b> Fn(&'a TranscriptMixedEd, Option<&'b Share>) -> bool + Send + Sync>> = Arc::new(Box::new(move |_, _| {
@@ -372,7 +373,7 @@ impl MixedEdReceiver {
                 }
                 _ = interval.tick() => {
                     if let (Some(coms), Some(share), Some(bmsg)) = (&maybe_coms, &maybe_share, &maybe_bmsg) {
-                        let params = MixedEdReceiverParams{bases, mpk, eks, sk, sender, sc};
+                        let params = MixedEdReceiverParams{bases, vkeys, eks, sk, sender, sc};
                         if verify_transcript(coms, bmsg, &params) {
                             let deliver = ACSSDeliver::new(share.clone(), coms.clone(), sender);
                             self.params.tx.send(deliver).await.expect("Send to parent failed!");
@@ -445,8 +446,8 @@ mod tests {
         let s = InputSecret::new_random(&sc, true, &mut rng);
 
         let keys = generate_ed_sig_keys(n);
-        let ver_keys = keys.iter().map(|x| x.public_key.clone()).collect::<Vec<Ed25519PublicKey>>();
-        let mpk = MultiEd25519PublicKey::new(ver_keys, deg+1).unwrap();
+        let vkeys = keys.iter().map(|x| x.public_key.clone()).collect::<Vec<Ed25519PublicKey>>();
+        // let mpk = MultiEd25519PublicKey::new(ver_keys, deg+1).unwrap();
 
         let dec_keys = random_scalars(n, &mut rng);
         let enc_keys = dec_keys.iter().map(|x| g.mul(x)).collect::<Vec<_>>();
@@ -458,7 +459,7 @@ mod tests {
         let mut rxs = Vec::new();
         for i in 0..n {
             let sk = &keys[i].private_key;
-            let add_params = MixedEdReceiverParams::new(bases, mpk.clone(), enc_keys.clone(), sk.clone(), nodes[0].get_own_idx(), sc.clone());
+            let add_params = MixedEdReceiverParams::new(bases, vkeys.clone(), enc_keys.clone(), sk.clone(), nodes[0].get_own_idx(), sc.clone());
             let (tx, rx) =
                 run_protocol!(MixedEdReceiver, handles[i].clone(), nodes[i].clone(), id.clone(), dst.clone(), add_params);
             txs.push(tx);
@@ -473,7 +474,7 @@ mod tests {
         let secret_r = s.get_secret_r0();
 
         let wait = 50;
-        let params = MixedEdSenderParams::new(bases, mpk, enc_keys, sc.clone(), s, wait);
+        let params = MixedEdSenderParams::new(bases, vkeys, enc_keys, sc.clone(), s, wait);
         let (stx, _) = run_protocol!(MixedEdSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 
         let mut all_shares = Vec::with_capacity(n);

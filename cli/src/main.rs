@@ -253,15 +253,15 @@ fn main() -> Result<()> {
                     },
 
                     ACSSType::LowEd => {
-                        let (sk, mpk) = low_ed_params(&sc, self_idx);
+                        let (sk, vkeys) = low_ed_params(&sc, self_idx);
                         (_, rx) = {
-                            let recv_params = LowEdReceiverParams::new(bases, mpk.clone(), sk, sender, sc.clone());
+                            let recv_params = LowEdReceiverParams::new(bases, vkeys.clone(), sk, sender, sc.clone());
                             run_protocol!(LowEdReceiver, handle.clone(), Arc::new(node.clone()), id.clone(), dst.clone(), recv_params)
                         };
 
                         thread::sleep(start_delay);
                         if sender == self_idx {
-                            let params = LowEdSenderParams::new(bases, mpk, sc, s);
+                            let params = LowEdSenderParams::new(bases, vkeys, sc, s);
                             let _ = run_protocol!(LowEdSender, handle.clone(), Arc::new(node), id, dst, params);
                         }
                     },
@@ -280,32 +280,32 @@ fn main() -> Result<()> {
                         }
                     },
                     ACSSType::MixEd => {
-                        let (sk, mpk,ekeys) = mixed_ed_params(&sc, &bases, self_idx);
+                        let (sk, vkeys ,ekeys) = mixed_ed_params(&sc, &bases, self_idx);
 
                         (_, rx) = {
-                            let recv_params = MixedEdReceiverParams::new(bases, mpk.clone(), ekeys.clone(), sk, sender, sc.clone());
+                            let recv_params = MixedEdReceiverParams::new(bases, vkeys.clone(), ekeys.clone(), sk, sender, sc.clone());
                             run_protocol!(MixedEdReceiver, handle.clone(), Arc::new(node.clone()), id.clone(), dst.clone(), recv_params)
                         };
 
                         thread::sleep(start_delay);
 
                         if sender == self_idx {
-                            let params = MixedEdSenderParams::new(bases, mpk, ekeys, sc, s, wait);
+                            let params = MixedEdSenderParams::new(bases, vkeys, ekeys, sc, s, wait);
                             let _ = run_protocol!(MixedEdSender, handle.clone(), Arc::new(node), id, dst, params);
                         }
                     },
                     ACSSType::MixBLS => {
-                        let (sk, mpk,ekeys) = mixed_bls_params(&sc, &bases, self_idx);
+                        let (sk, vkeys,ekeys) = mixed_bls_params(&sc, &bases, self_idx);
 
                         (_, rx) = {
-                            let recv_params = MixedBLSReceiverParams::new(bases, mpk.clone(), ekeys.clone(), sk, sender, sc.clone());
+                            let recv_params = MixedBLSReceiverParams::new(bases, vkeys.clone(), ekeys.clone(), sk, sender, sc.clone());
                             run_protocol!(MixedBLSReceiver, handle.clone(), Arc::new(node.clone()), id.clone(), dst.clone(), recv_params)
                         };
 
                         thread::sleep(start_delay);
 
                         if sender == self_idx {
-                            let params = MixedBLSSenderParams::new(bases, mpk, ekeys, sc, s, wait);
+                            let params = MixedBLSSenderParams::new(bases, vkeys, ekeys, sc, s, wait);
                             let _ = run_protocol!(MixedBLSSender, handle.clone(), Arc::new(node), id, dst, params);
                         }
                     },
