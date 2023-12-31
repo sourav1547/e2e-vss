@@ -233,6 +233,7 @@ fn main() -> Result<()> {
                 let start_delay = Duration::from_millis(2000);
                 let self_idx = node.get_own_idx();
                 let mut rx;
+                let wait = 50;
                 
                 // Start timer
                 handle.handle_stats_start("Node");
@@ -290,7 +291,7 @@ fn main() -> Result<()> {
                         thread::sleep(start_delay);
 
                         if sender == self_idx {
-                            let params = MixedEdSenderParams::new(bases, mpk, ekeys, sc, s);
+                            let params = MixedEdSenderParams::new(bases, mpk, ekeys, sc, s, wait);
                             let _ = run_protocol!(MixedEdSender, handle.clone(), Arc::new(node), id, dst, params);
                         }
                     },
@@ -305,7 +306,7 @@ fn main() -> Result<()> {
                         thread::sleep(start_delay);
 
                         if sender == self_idx {
-                            let params = MixedBLSSenderParams::new(bases, mpk, ekeys, sc, s);
+                            let params = MixedBLSSenderParams::new(bases, mpk, ekeys, sc, s, wait);
                             let _ = run_protocol!(MixedBLSSender, handle.clone(), Arc::new(node), id, dst, params);
                         }
                     },

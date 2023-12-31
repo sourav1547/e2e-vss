@@ -16,6 +16,7 @@ use crate::vss::ni_vss::encryption::dec_chunks;
 use super::common::{Share, groth_deal};
 use super::messages::*;
 use super::transcript::TranscriptGroth;
+use super::transcript::TranscriptVE;
 use utils::tokio::{self, select};
 
 #[derive(Clone)]
@@ -54,7 +55,7 @@ type F = Box<dyn Fn(&TranscriptGroth, Option<&Share>) -> bool + Send + Sync>;
 pub fn get_transcript(params: &GrothSenderParams) -> TranscriptGroth {
     let (coms, ciphertext, r_bb, enc_rr, chunk_pf, sh_pf) = groth_deal(&params.sc, &params.bases, &params.eks, &params.s);
 
-    TranscriptGroth::new(coms, ciphertext, chunk_pf, r_bb, enc_rr,  sh_pf)
+    TranscriptGroth::new(coms, TranscriptVE::new(ciphertext, chunk_pf, r_bb, enc_rr,  sh_pf))
 }
 
 impl GrothSender {
@@ -114,8 +115,7 @@ impl Protocol<RBCParams, GrothReceiverParams, Shutdown, ACSSDeliver> for GrothRe
 
 pub fn verify_transcript(t: &TranscriptGroth, params: &GrothReceiverParams) -> bool {
     let h = params.bases[1];
-    let valid = verify_dealing(&h, t.coms(), &params.eks, &t.ciphertext, &t.chunk_pf, &t.r_bb, &t.enc_rr, &t.share_pf);
-    valid
+    verify_dealing(&h, t.coms(), &params.eks, &t.t_ve.ciphertext, &t.t_ve.chunk_pf, &t.t_ve.r_bb, &t.t_ve.enc_rr, &t.t_ve.share_pf)
 }
 
 
@@ -138,7 +138,7 @@ impl GrothReceiver {
         loop {
             select! {
                 Some(RBCDeliver {bmsg, .. })  = rx.recv() => {
-                    let secret = dec_chunks(&bmsg.ciphertext, dk_clone, node.get_own_idx().clone());
+                    let secret = dec_chunks(&bmsg.t_ve.ciphertext, dk_clone, node.get_own_idx().clone());
                     let share = Share{share: [secret, Scalar::zero()]};
     
                     let deliver = ACSSDeliver::new(share, bmsg.coms().clone(), sender);

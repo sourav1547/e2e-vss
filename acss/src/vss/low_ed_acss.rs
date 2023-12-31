@@ -66,8 +66,11 @@ type F = Box<dyn Fn(&TranscriptEd, Option<&Share>) -> bool + Send + Sync>;
 pub fn get_transcript(shares: &Vec<Share>, signers: &Vec<bool>, sigs: Vec<Ed25519Signature>) -> TranscriptEd {
     let agg_sig = aggregate_sig(signers.clone(), sigs);
     let n = shares.len();
+    if agg_sig.get_num_voters() == n {
+        return TranscriptEd::new(None, None, agg_sig);
+    }
+    
     let missing_count = n-agg_sig.get_num_voters();
-
     let mut m_shares = Vec::with_capacity(missing_count);
     let mut m_randomness = Vec::with_capacity(missing_count);
 
@@ -78,7 +81,7 @@ pub fn get_transcript(shares: &Vec<Share>, signers: &Vec<bool>, sigs: Vec<Ed2551
         }
     }
 
-    TranscriptEd::new(m_shares, m_randomness, agg_sig)
+    TranscriptEd::new(Some(m_shares), Some(m_randomness), agg_sig)
 }
 
 // Takes as input a vector of boolean indicating which signers are set
@@ -97,20 +100,27 @@ pub fn aggregate_sig(signers: Vec<bool>, sigs: Vec<Ed25519Signature>) -> EdSigna
 
 pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptEd, sc: &SharingConfiguration, bases: &[G1Projective; 2], pk: &MultiEd25519PublicKey) -> bool {
     let num_signed = t.agg_sig().get_num_voters();
-    let n = sc.n;
-    let missing_ct = n-num_signed;
-    
-    // Checking low-degree of the committed polynomial
-    assert!(t.shares().len() == t.randomness().len());
-    assert!(t.shares().len() == missing_ct);
+    let TranscriptEd{shares, randomness, agg_sig  } = t.clone();
 
     // Checking correctness of aggregate signature
     let mut hasher = Sha256::new();
     hasher.update(bcs::to_bytes(coms).unwrap());
     let root: [u8; 32] = hasher.finalize().into();
-    assert!(t.agg_sig().verify(root.as_slice(), &pk));
+    
+    let missing_ct = sc.n-num_signed;
+    if missing_ct == 0 {
+        return agg_sig.verify(root.as_slice(), &pk);
+    }
 
-    let mut missing_coms = Vec::with_capacity(t.shares().len());
+    let shares = shares.unwrap();
+    let randomness = randomness.unwrap();
+    
+    // Checking low-degree of the committed polynomial
+    assert!(shares.len() == randomness.len());
+    assert!(shares.len() == missing_ct);
+
+
+    let mut missing_coms = Vec::with_capacity(shares.len());
 
     let mut rng = thread_rng();
     let lambdas = random_scalars_range(&mut rng, u64::MAX, missing_ct);
@@ -119,10 +129,10 @@ pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptEd, sc: &Sharin
     let mut idx = 0;
     let mut s = Scalar::zero();
     let mut r = Scalar::zero();
-    for pos in 0..n {
+    for pos in 0..sc.n {
         if !t.agg_sig().get_signers_bitvec().is_set(pos as u16) {
-            s += lambdas[idx]*t.shares()[idx];
-            r += lambdas[idx]*t.randomness()[idx];
+            s += lambdas[idx]*shares[idx];
+            r += lambdas[idx]*randomness[idx];
             
             idx +=1;
             missing_coms.push(coms[pos]);

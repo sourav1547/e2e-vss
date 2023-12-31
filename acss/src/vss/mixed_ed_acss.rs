@@ -2,6 +2,7 @@ extern crate core;
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use std::{thread, cmp};
 use aptos_bitvec::BitVec;
 use blstrs::G1Projective;
@@ -21,6 +22,7 @@ use crate::vss::common::share_verify;
 use crate::vss::keys::InputSecret;
 use crate::pvss::SharingConfiguration;
 use crate::vss::ni_vss::dealing::{create_dealing, verify_dealing};
+use crate::vss::transcript::{TranscriptEd, TranscriptVE};
 use super::common::{Share, gen_coms_shares};
 use super::messages::*;
 use super::sigs::EdSignature;
@@ -36,11 +38,19 @@ pub struct MixedEdSenderParams {
     pub eks: Vec<G1Projective>,
     pub sc: SharingConfiguration, 
     pub s: InputSecret,
+    pub wait: usize,
 }
 
 impl MixedEdSenderParams {
-    pub fn new(bases: [G1Projective; 2], vks: MultiEd25519PublicKey, eks: Vec<G1Projective>, sc: SharingConfiguration, s: InputSecret) -> Self {
-        Self { bases, vks, eks, sc, s }
+    pub fn new(
+        bases: [G1Projective; 2], 
+        vks: MultiEd25519PublicKey, 
+        eks: Vec<G1Projective>, 
+        sc: SharingConfiguration, 
+        s: InputSecret, 
+        wait: usize
+    ) -> Self {
+        Self { bases, vks, eks, sc, s, wait }
     }
 }
 pub struct MixedEdSender {
@@ -66,8 +76,13 @@ type F = Box<dyn Fn(&TranscriptMixedEd, Option<&Share>) -> bool + Send + Sync>;
 // This function outputs the Mixed-VSS transcript. 
 // This function assumes that all signatures are valid
 pub fn get_transcript(coms: &Vec<G1Projective>, shares: &Vec<Share>, signers: &Vec<bool>, sigs: &Vec<Ed25519Signature>, params: &MixedEdSenderParams, th: usize) -> TranscriptMixedEd {
-    
     assert!(sigs.len() >= 2*th+1);
+
+    let agg_sig = aggregate_sig(signers.clone(), sigs.to_vec());
+    if sigs.len() == params.sc.get_total_num_players() {
+        return TranscriptMixedEd::new(TranscriptEd::new(None, None, agg_sig), None);
+    }
+
     let deg = params.sc.get_threshold() -1;
     let max_reveal = 2*th - deg;
     let n = signers.len();
@@ -101,12 +116,14 @@ pub fn get_transcript(coms: &Vec<G1Projective>, shares: &Vec<Share>, signers: &V
         }
     }
     
-    let agg_sig = aggregate_sig(signers.clone(), sigs.to_vec());
     // let (ciphertext, proof) = create_dealing(&enc_shares, &enc_randomness, &enc_pks);
     let h = params.bases[1];
     let (ciphertext, r_bb, enc_rr, chunk_pf, share_pf) = create_dealing(&h, &enc_commits, &enc_pks, &enc_shares, &enc_randomness);
+
+    let t_ed = TranscriptEd::new(Some(reveal_shares), Some(reveal_randomness), agg_sig);
+    let t_ve = TranscriptVE::new(ciphertext, chunk_pf, r_bb, enc_rr, share_pf);
     
-    TranscriptMixedEd::new(coms.clone(), reveal_shares, reveal_randomness, agg_sig, ciphertext, chunk_pf, r_bb, enc_rr, share_pf)
+    TranscriptMixedEd::new(t_ed, Some(t_ve))
 }
 
 
@@ -125,36 +142,43 @@ pub fn aggregate_sig(signers: Vec<bool>, sigs: Vec<Ed25519Signature>) -> EdSigna
 }
 
 pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptMixedEd, params: &MixedEdReceiverParams) -> bool {
-//  sc: &SharingConfiguration, pp: &PublicParameters, pk: &MultiEd25519PublicKey, pub_keys: &Vec<G1Projective>) -> bool {
     let n = coms.len();
-    let num_signed = t.agg_sig().get_num_voters();
-    let missing_count = n-num_signed;
-    let reveal_count = t.reveal_count();
-    let enc_count = missing_count-reveal_count;
-
-    // Checking lengths of the openning vectors
-    assert!(t.randomness().len() == reveal_count);
-    assert!(t.enc_rr().len() == enc_count);
-
+    let TranscriptMixedEd{t_ed, t_ve} = t.clone();
+    let TranscriptEd{shares, randomness, agg_sig} = t_ed;
+    
     // Checking correctness of aggregate signature
     let mut hasher = Sha256::new();
     hasher.update(bcs::to_bytes(coms).unwrap());
     let root: [u8; 32] = hasher.finalize().into();
-    assert!(t.agg_sig().verify(root.as_slice(), &params.mpk));
+
+    let missing_count = n-agg_sig.get_num_voters();
+    if missing_count == 0 {
+        return agg_sig.verify(root.as_slice(), &params.mpk)
+    }
+
+    let TranscriptVE{ciphertext, chunk_pf, r_bb, enc_rr, share_pf} = t_ve.unwrap();
+    let shares = shares.unwrap();
+    let randomness = randomness.unwrap();
+    
+    let reveal_count = shares.len();
+    let enc_count = missing_count-reveal_count;
+
+    // Checking lengths of the openning vectors
+    assert!(randomness.len() == reveal_count);
+    assert!(enc_rr.len() == enc_count);
 
     // Encryption keys of nodes whose shares are not opened
     let mut enc_coms = Vec::with_capacity(enc_count);
     let mut enc_keys = Vec::with_capacity(enc_count);
     
-
     // Checking the correctness of the revealed shares and randomness 
     let mut idx = 0;
     for pos in 0..n {
-        if !t.agg_sig().get_signers_bitvec().is_set(pos as u16) {
+        if !agg_sig.get_signers_bitvec().is_set(pos as u16) {
             
             if idx < reveal_count {
-                let s = t.shares()[idx];
-                let r = t.randomness()[idx];
+                let s = shares[idx];
+                let r = randomness[idx];
 
                 let com_pos = G1Projective::multi_exp(&params.bases, [s, r].as_slice());
                 assert!(com_pos == coms[pos]);
@@ -168,9 +192,8 @@ pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptMixedEd, params
 
     // FIXME: As of now this assert will fail if the randomness vector is non-zero
     let h = params.bases[1];
-    assert!(verify_dealing(&h, &enc_coms, &enc_keys, &t.ciphertext, &t.chunk_pf, &t.r_bb, &t.enc_rr, &t.share_pf));
+    agg_sig.verify(root.as_slice(), &params.mpk) && verify_dealing(&h, &enc_coms, &enc_keys, &ciphertext, &chunk_pf, &r_bb, &enc_rr, &share_pf)
 
-    true
 }
 
 impl MixedEdSender {
@@ -179,7 +202,7 @@ impl MixedEdSender {
         let th = self.params.node.get_threshold();
         let mut rx_ack = subscribe_msg!(self.params.handle, &self.params.id, AckMsg);
 
-        let MixedEdSenderParams{bases, vks, eks, sc, s} = self.additional_params.take().expect("No additional params given!");
+        let MixedEdSenderParams{bases, vks, eks, sc, s, wait} = self.additional_params.take().expect("No additional params given!");
         let node = self.params.node.clone();
         let (coms, shares) = gen_coms_shares(&sc, &s, &bases);
         let (tx_one, rx_one) = oneshot::channel();
@@ -190,12 +213,15 @@ impl MixedEdSender {
             let _ = tx_one.send((coms_clone, shares_clone));
         });
 
+        let start;
+        let wait_time = Duration::from_millis(wait.try_into().unwrap());
         select! {
             Ok((bmsg, pmsg)) = rx_one => {
                 for (i, y_s) in pmsg.iter().enumerate() {
                     let send_msg = ShareMsg::new(bmsg.clone(), y_s.clone());
                     self.params.handle.send(i, &self.params.id, &send_msg).await;
                 }
+                start = Instant::now();                
                 self.params.handle.handle_stats_end().await;
             }
         }
@@ -221,7 +247,8 @@ impl MixedEdSender {
                             signers[sender] = true;
                             sig_map.insert(sender, ack_msg.sig);
                             
-                            if sig_map.len() >= sc.n-th {
+                            let duration = start.elapsed();
+                            if (sig_map.len()==sc.n) || (sig_map.len() >= sc.n-th && duration > wait_time) {
                                 self.params.handle.unsubscribe::<AckMsg>(&self.params.id).await;
                                 close_and_drain!(rx_ack);
                                 self.params.handle.handle_stats_event("Enough sigs collected");
@@ -247,7 +274,7 @@ impl MixedEdSender {
                     sigs.push(sig_map.get(&idx).unwrap().clone())
                 }
             }
-            let params = MixedEdSenderParams { bases, vks, eks, sc, s };
+            let params = MixedEdSenderParams { bases, vks, eks, sc, s, wait };
             let _ = tx_one.send(get_transcript(&coms,&shares, &signers, &sigs, &params, th));
         });
 
@@ -398,7 +425,7 @@ mod tests {
         let mut rng = thread_rng();
         let seed = b"hello";
         
-        let th: usize = 12;
+        let th: usize = 1;
         let deg = 2*th;
         let n = 3*th + 1;
         let start: u16 = 10098;
@@ -441,7 +468,8 @@ mod tests {
         let duration = Duration::from_millis(2500);
         thread::sleep(duration);
 
-        let params = MixedEdSenderParams::new(bases, mpk, enc_keys, sc.clone(), s);
+        let wait = 500;
+        let params = MixedEdSenderParams::new(bases, mpk, enc_keys, sc.clone(), s, wait);
         let (stx, _) = run_protocol!(MixedEdSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 
         for (i, rx) in rxs.iter_mut().enumerate() {
