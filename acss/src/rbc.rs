@@ -193,7 +193,6 @@ impl<B,P,F> RBCReceiver<B,P,F>
 
                     self.params.handle.handle_stats_end().await;
                     shutdown_done!(tx_shutdown);
-                    return
                 },
 
                 Some(msg) = rx_send.recv() => {

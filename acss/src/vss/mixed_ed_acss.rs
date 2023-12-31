@@ -73,7 +73,6 @@ type B = TranscriptMixedEd;
 type P = Share;
 type F = Box<dyn Fn(&TranscriptMixedEd, Option<&Share>) -> bool + Send + Sync>;
 
-// This function outputs the Mixed-VSS transcript. 
 // This function assumes that all signatures are valid
 pub fn get_transcript(coms: &Vec<G1Projective>, shares: &Vec<Share>, signers: &Vec<bool>, sigs: &Vec<Ed25519Signature>, params: &MixedEdSenderParams, th: usize) -> TranscriptMixedEd {
     assert!(sigs.len() >= 2*th+1);
@@ -408,11 +407,13 @@ mod tests {
 
     use aptos_crypto::ed25519::Ed25519PublicKey;
     use group::Group;
+    use rand::seq::IteratorRandom;
     use rand::thread_rng;
     use network::message::Id;
     use protocol::run_protocol;
     use protocol::tests::generate_nodes;
     use utils::{tokio, shutdown};
+    use crate::vss::recon::reconstruct;
     use crate::{DST_PVSS_PUBLIC_PARAMS_GENERATION, random_scalars};
     use crate::pvss::SharingConfiguration;
     use crate::vss::common::{generate_ed_sig_keys, low_deg_test};
@@ -468,10 +469,14 @@ mod tests {
         let duration = Duration::from_millis(2500);
         thread::sleep(duration);
 
-        let wait = 500;
+        let secret_s = s.get_secret_a();
+        let secret_r = s.get_secret_r0();
+
+        let wait = 50;
         let params = MixedEdSenderParams::new(bases, mpk, enc_keys, sc.clone(), s, wait);
         let (stx, _) = run_protocol!(MixedEdSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 
+        let mut all_shares = Vec::with_capacity(n);
         for (i, rx) in rxs.iter_mut().enumerate() {
             match rx.recv().await {
                 Some(ACSSDeliver { y, coms, .. }) => {
@@ -480,10 +485,25 @@ mod tests {
                     let e_com = G1Projective::multi_exp(&bases, &y.share);
                     assert!(com.eq(&e_com));
                     assert!(low_deg_test(&coms, &sc));
+                    all_shares.push(y);
                 },
                 None => assert!(false),
             }
         }
+
+        let mut shares = Vec::with_capacity(th);
+        let mut players : Vec<usize> = (0..n)
+        .choose_multiple(&mut rng, deg+1)
+        .into_iter().collect::<Vec<usize>>();
+        players.sort();
+
+        for i in 0..=deg {
+            shares.push(all_shares[players[i]]);
+        }
+        let (recon_s, recon_r) = reconstruct(&shares, &players, n);
+        assert!(secret_s == recon_s);
+        assert!(secret_r == recon_r);
+
         shutdown!(stx, Shutdown);
         for tx in txs.iter() {
             shutdown!(tx, Shutdown);

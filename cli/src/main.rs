@@ -233,7 +233,6 @@ fn main() -> Result<()> {
                 let start_delay = Duration::from_millis(2000);
                 let self_idx = node.get_own_idx();
                 let mut rx;
-                let wait = 50;
                 
                 // Start timer
                 handle.handle_stats_start("Node");

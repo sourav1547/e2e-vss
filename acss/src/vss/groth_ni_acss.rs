@@ -165,12 +165,14 @@ mod tests {
     use std::thread;
     use std::time::Duration;
     use group::Group;
+    use rand::seq::IteratorRandom;
     use rand::thread_rng;
     use network::message::Id;
     use protocol::run_protocol;
     use protocol::tests::generate_nodes;
     use utils::{tokio, shutdown};
     use crate::vss::common::low_deg_test;
+    use crate::vss::recon::reconstruct;
     use crate::{DST_PVSS_PUBLIC_PARAMS_GENERATION, random_scalars};
     use crate::pvss::SharingConfiguration;
     use crate::vss::keys::InputSecret;
@@ -199,7 +201,7 @@ mod tests {
         let n = nodes.len();
 
         let sc = SharingConfiguration::new(deg+1, n);
-        let s = InputSecret::new_random(&sc, true, &mut rng);
+        let s = InputSecret::new_random(&sc, false, &mut rng);
 
         let dec_keys = random_scalars(n, &mut rng);
         let enc_keys = dec_keys.iter().map(|x| g.mul(x)).collect::<Vec<_>>();
@@ -221,22 +223,40 @@ mod tests {
         let duration = Duration::from_millis(500);
         thread::sleep(duration);
 
+        let secret_s = s.get_secret_a();
+        let secret_r = s.get_secret_r0();
+
         let params = GrothSenderParams::new(sc.clone(), s, bases, enc_keys);
         let (stx, _) = run_protocol!(GrothSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 
-        // let mut points = Vec::new();
-        for (_, rx) in rxs.iter_mut().enumerate() {
+        let mut all_shares = Vec::with_capacity(n);
+        for (i, rx) in rxs.iter_mut().enumerate() {
             match rx.recv().await {
-                Some(ACSSDeliver { coms, .. }) => {
+                Some(ACSSDeliver { y, coms, .. }) => {
                     assert!(coms.len() == n);
-                    // let com: G1Projective = coms[nodes[i].get_own_idx()];
-                    // let e_com = G1Projective::multi_exp(&bases, &y.share);
-                    // assert!(com.eq(&e_com));
+                    let com: G1Projective = coms[nodes[i].get_own_idx()];
+                    let e_com = G1Projective::multi_exp(&bases, &y.share);
+                    assert!(com.eq(&e_com));
                     assert!(low_deg_test(&coms, &sc));
+                    all_shares.push(y);
                 },
                 None => assert!(false),
             }
         }
+
+        let mut shares = Vec::with_capacity(th);
+        let mut players : Vec<usize> = (0..n)
+        .choose_multiple(&mut rng, deg+1)
+        .into_iter().collect::<Vec<usize>>();
+        players.sort();
+
+        for i in 0..=deg {
+            shares.push(all_shares[players[i]]);
+        }
+        let (recon_s, recon_r) = reconstruct(&shares, &players, n);
+        assert!(secret_s == recon_s);
+        assert!(secret_r == recon_r);
+
         shutdown!(stx, Shutdown);
         for tx in txs.iter() {
             shutdown!(tx, Shutdown);

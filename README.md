@@ -18,7 +18,7 @@ After building, you can execute the `cli` binary. Alternatively, it might be eas
 For further information, please check `cli --help` (or `cargo run -- --help`). This also works for subcommands, e.g., `cli generate --help`.
 
 
-As a convenience, you can also use `run.sh`. It automates the config generation and node execution. To run a test across `NUM_NODES` nodes use `./run.sh bash [NUM_NODES] [ACSS_TYPE] [DEG] [SEED]`. For example, if you run `./run.sh bash 16 low-ed 10 1024`, it wiill run our low-threshold ACSS scheme with 16 nodes, use a polynomial degree of `10`, and use 1024 as the seed for generating random numbers. 
+As a convenience, you can also use `run.sh`. It automates the config generation and node execution. To run a test across `NUM_NODES` nodes use `./run.sh bash [NUM_NODES] [ACSS_TYPE] [DEG] [SEED] [WAIT_TIME]`. For example, if you run `./run.sh bash 16 low-ed 10 1024 10`, it wiill run our low-threshold ACSS scheme with 16 nodes, use a polynomial degree of `10`, and use 1024 as the seed for generating random numbers. 
 
 PARAMETER CHOICES:
 1. Choice of `ACSS_TYPE` are: `yurek`, `low-ed`, `low-bls`, `mix-ed`, `mix-bls`, and `groth`.

@@ -13,6 +13,7 @@ pub mod public_parameters;
 pub mod common;
 pub mod transcript;
 pub mod ni_vss;
+pub mod recon;
 
 pub enum NiVSSError {
     /// Struct to be signed does not serialize correctly.

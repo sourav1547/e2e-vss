@@ -35,7 +35,7 @@ unset SLURM_EXPORT_ENV
 RUST_BACKTRACE=full
 
 function run() {
-        local OUTPUT="\$(./target/release/cli run -c ./$TMP/node_\$1.cfg -s partial -a $3 -d $4 -p $5 -w 0)"
+        local OUTPUT="\$(./target/release/cli run -c ./$TMP/node_\$1.cfg -s partial -a $3 -d $4 -p $5 -w $6)"
         printf "\$OUTPUT\\n";
 }
 
