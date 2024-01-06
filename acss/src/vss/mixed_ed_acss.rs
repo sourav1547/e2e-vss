@@ -9,6 +9,7 @@ use blstrs::G1Projective;
 use network::subscribe_msg;
 use protocol::{Protocol, ProtocolParams,run_protocol};
 use sha2::{Digest, Sha256};
+use utils::tokio::time::sleep;
 use utils::{close_and_drain, shutdown_done};
 use utils::tokio;
 use tokio::select;
@@ -214,15 +215,12 @@ impl MixedEdSender {
             let _ = tx_one.send((coms_clone, shares_clone));
         });
 
-        let start;
-        let wait_time = Duration::from_millis(wait.try_into().unwrap());
         select! {
             Ok((bmsg, pmsg)) = rx_one => {
                 for (i, y_s) in pmsg.iter().enumerate() {
                     let send_msg = ShareMsg::new(bmsg.clone(), y_s.clone());
                     self.params.handle.send(i, &self.params.id, &send_msg).await;
                 }
-                start = Instant::now();                
                 self.params.handle.handle_stats_end().await;
             }
         }
@@ -235,7 +233,10 @@ impl MixedEdSender {
         let mut hasher = Sha256::new();
         hasher.update(bcs::to_bytes(&coms).unwrap());
         let root: [u8; 32] = hasher.finalize().into();
-        
+
+        let start = Instant::now();
+        let wait_time = Duration::from_millis(wait.try_into().unwrap());
+
         loop {
             select! {
                 Some(msg) = rx_ack.recv() => {
@@ -255,6 +256,14 @@ impl MixedEdSender {
                                 break
                             }
                         }
+                    }
+                },
+                _ = sleep(Duration::from_millis(wait.try_into().unwrap())) => {
+                    if sig_map.len() >= sc.n-th {
+                        self.params.handle.unsubscribe::<AckMsg>(&self.params.id).await;
+                        close_and_drain!(rx_ack);
+                        self.params.handle.handle_stats_event("Enough sigs collected");
+                        break
                     }
                 },
                 Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
@@ -473,7 +482,7 @@ mod tests {
         let secret_s = s.get_secret_a();
         let secret_r = s.get_secret_r0();
 
-        let wait = 50;
+        let wait = 10000;
         let params = MixedEdSenderParams::new(bases, vkeys, enc_keys, sc.clone(), s, wait);
         let (stx, _) = run_protocol!(MixedEdSender, handles[0].clone(), nodes[0].clone(), id.clone(), dst.clone(), params);
 

@@ -10,6 +10,7 @@ use network::subscribe_msg;
 use protocol::{Protocol, ProtocolParams,run_protocol};
 use serde::{Serialize, Deserialize};
 use sha2::{Digest, Sha256};
+use utils::tokio::time::sleep;
 use utils::{close_and_drain, shutdown_done};
 use utils::tokio;
 use tokio::select;
@@ -258,6 +259,14 @@ impl MixedBLSSender {
                         }
                     }
                 },
+                _ = sleep(Duration::from_millis(wait.try_into().unwrap())) => {
+                    if sig_map.len() >= sc.n-th {
+                        self.params.handle.unsubscribe::<AckMsg>(&self.params.id).await;
+                        close_and_drain!(rx_ack);
+                        self.params.handle.handle_stats_event("Enough sigs collected");
+                        break
+                    }
+                },
                 Some(Shutdown(tx_shutdown)) = self.params.rx.recv() => {
                     self.params.handle.unsubscribe::<AckMsg>(&self.params.id).await;
                     close_and_drain!(rx_ack);
@@ -470,7 +479,7 @@ mod tests {
         let duration = Duration::from_millis(500);
         thread::sleep(duration);
 
-        let wait = 20;
+        let wait = 0;
         let secret_s = s.get_secret_a();
         let secret_r = s.get_secret_r0();
 
