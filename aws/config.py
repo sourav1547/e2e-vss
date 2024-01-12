@@ -6,16 +6,16 @@ ACSS_PORT = 13021
 BENCH_RESULT_DIR="experiments"
 
 # EC2 Config
-INSTANCE_TYPE = "t3a.xlarge"
+INSTANCE_TYPE = "c5.2xlarge"
 IAM_INSTANCE_PROFILE = {
-        "Arn": "arn:aws:iam::324584057370:instance-profile/Ec2BenchmarkRole",
+        "Arn": "arn:aws:iam::395431295218:instance-profile/vss",
 }
 OPEN_PORTS = [
         ACSS_PORT
 ]
 # Region: (AMI, VPC)
 REGIONS = {
-        "us-east-2": ("ami-09e2d756e7d78558d", "vpc-17ecf57f"),
+        "us-east-2": ("ami-0c2f3d2ee24929520", "vpc-17ecf57f"),
         # "us-east-1": ("ami-05fa00d4c63e32376", "vpc-09750316c0cd0d450"),
         # "us-east-2": ("ami-0568773882d492fc8", "vpc-083a279f83f3aa65b"),
         # "us-west-1": ("ami-018d291ca9ffc002f", "vpc-09983ca9a25ee7160"),

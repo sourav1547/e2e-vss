@@ -8,15 +8,15 @@ from utils import *
 from config import *
 from aws import *
 
-def experiment(trial, repetitions, timeout, prob):
+def experiment(trial, repetitions, timeout, acss_type, deg, seed, wait_time):
     ec2 = EC2Instance(trial)
     num_nodes = sum([len(i) for i in ec2.instances.values()])
 
     trial_dir = f"{BENCH_RESULT_DIR}/{trial}"
     os.makedirs(trial_dir, exist_ok=True)
     file_name =  f"{trial_dir}/{trial}_n_{num_nodes}"
-    if prob:
-        file_name += f"_p_{prob.replace('/', '_')}"
+    if acss_type:
+        file_name += f"_p_{acss_type}_{deg}_{wait_time}"
     file_name += ".json"
 
     with open(file_name, "x") as f:
@@ -24,14 +24,16 @@ def experiment(trial, repetitions, timeout, prob):
         for i in range(0, repetitions):
             print(f"Experiment {i}...")
             cmd = "cli run -c node.cfg -s partial"
-            if prob:
-                cmd += f" -p '{prob}'"
+            if acss_type:
+                cmd += f" -a '{acss_type}' -d '{deg}' -p '{seed}' -w '{wait_time}'"
             print(cmd)
             outputs[i] = ec2.run_commands([cmd], max_wait_sec=timeout, output=True) 
 
         data = {
                 "trial": trial,
-                "probability": prob,
+                "acss_type": acss_type,
+                "deg": deg,
+                "wait_time": wait_time,
                 "timeout": timeout,
                 "regions": REGIONS,
                 "instance_type": INSTANCE_TYPE,
@@ -43,14 +45,17 @@ def experiment(trial, repetitions, timeout, prob):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 4:
-        bail(f"{sys.argv[0]} [TRIAL] [REPETITIONS] [TIMEOUT] <PROBABILITY>")
+    if len(sys.argv) < 7:
+        bail(f"{sys.argv[0]} [TRIAL] [REPETITIONS] [TIMEOUT] <ACSS_TYPE> <DEG> <SEED> <WAIT TIME>")
 
-    prob = None
-    if len(sys.argv) == 5:
-        prob = sys.argv[4]
-        if not re.fullmatch(r"\d+/\d+", prob):
-            bail(f"PROBABILIY {prob} is not a fraction!")
+    acss_type, deg, seed, wait_time = None, None, None, None
+    if len(sys.argv) == 8:
+        acss_type = sys.argv[4]
+        deg = sys.argv[5]
+        seed = sys.argv[6]
+        deg = sys.argv[7]
+        # if not re.fullmatch(r"\d+/\d+", prob):
+        #     bail(f"PROBABILIY {prob} is not a fraction!")
     try:
         repetitions = int(sys.argv[2])
     except ValueError:
@@ -60,4 +65,4 @@ if __name__ == "__main__":
     except ValueError:
             bail(f"TIMEOUT = {sys.argv[3]} is not an integer")
 
-    experiment(sys.argv[1], repetitions, timeout, prob=prob)
+    experiment(sys.argv[1], repetitions, timeout, acss_type=acss_type, deg=deg, seed=seed, wait_time=wait_time)
