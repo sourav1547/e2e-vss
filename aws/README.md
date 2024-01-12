@@ -1,5 +1,5 @@
 # Deploy to AWS
-1. Set credentials in the environment (e.g., using `setup_env.fish`)
+1. Set credentials in the environment, i.e., set the environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` with appropriate values. You can also use `setup_env.fish` to do that.
 2. Set the regions, instance type, etc. in `config.py`.
 3. Run `./spawn.py [TRIAL] [NODE_COUNT] <SETUP_COMMAND>` to spawn nodes and one S3 bucket. The trial is a name that you can give the current experiment run and is used in the following commands.
 4. Run `./deploy_binary.py [TRIAL]` to build the binary locally and deploy it to the machines.

@@ -53,7 +53,7 @@ if __name__ == "__main__":
         acss_type = sys.argv[4]
         deg = sys.argv[5]
         seed = sys.argv[6]
-        deg = sys.argv[7]
+        wait_time = sys.argv[7]
         # if not re.fullmatch(r"\d+/\d+", prob):
         #     bail(f"PROBABILIY {prob} is not a fraction!")
     try:
