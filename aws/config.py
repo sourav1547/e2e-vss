@@ -19,7 +19,8 @@ REGIONS = {
         "us-east-1": ("ami-0005e0cfe09cc9050", "vpc-850798ff"),
         "us-west-1": ("ami-0a5ed7a812aeb495a", "vpc-ca615aad"),
         "us-west-2": ("ami-0944e91aed79c721c", "vpc-b6c46cce"),
-        # "ca-central-1": ("ami-06b0bb707079eb96a", "vpc-0572b93cbb72a0a0f"),
-        # "ap-northeast-1": ("ami-0f36dcfcc94112ea1", "vpc-0762764d4ebbedf85"),
-        # "ap-southeast-1": ("ami-0b89f7b3f054b957e", "vpc-07f97852441242076"),
+        "ca-central-1": ("ami-0b7fec1e45e0e5ae5", "vpc-dff79eb7"),
+        "eu-west-1": ("ami-062a49a8152e4c031", "vpc-43d9dc25"),
+        "ap-northeast-1": ("ami-0506f0f56e3a057a4", "vpc-07a28d60"),
+        "ap-southeast-1": ("ami-0120e0e7231daa18b", "vpc-b31c2ed4"),
 }
