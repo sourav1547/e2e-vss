@@ -86,7 +86,7 @@ impl<B,P> RBCSender<B,P>
     }
 
     pub async fn run(&mut self) {
-        self.params.handle.handle_stats_start("ACSS Sender");
+        self.params.handle.handle_stats_start("RBC Sender");
 
         let RBCSenderParams{bmsg, pmsg} = self.additional_params.take().expect("No additional params given!");
 
@@ -165,7 +165,7 @@ impl<B,P,F> RBCReceiver<B,P,F>
  {
     pub async fn run(&mut self) {
         let RBCReceiverParams{sender, verify, ..} = self.additional_params.take().expect("No additional params!");
-        self.params.handle.handle_stats_start(format!("ACSS Receiver {}", sender));
+        self.params.handle.handle_stats_start(format!("RBC Receiver {}", sender));
 
         let mut rx_send = subscribe_msg!(self.params.handle, &self.params.id, SendMsg<B,P>);
         let mut rx_echo = subscribe_msg!(self.params.handle, &self.params.id, EchoMsg);
@@ -236,8 +236,7 @@ impl<B,P,F> RBCReceiver<B,P,F>
 
                             // Send ready
                             if *count >= 2 * self.params.node.get_threshold() + 1 {
-                                self.params.handle.handle_stats_event("Send ready from echo");
-                                    self.send_ready(&mut ready_sent, digest).await;
+                                self.send_ready(&mut ready_sent, digest, true).await;
                             }
                         }
                     }
@@ -257,14 +256,14 @@ impl<B,P,F> RBCReceiver<B,P,F>
 
                             // Ready amplication
                             if *count > self.params.node.get_threshold() {
-                                self.params.handle.handle_stats_event("Send ready from ready");
-                                self.send_ready(&mut ready_sent, digest).await;
+                                self.send_ready(&mut ready_sent, digest, false).await;
                             }
 
                             // Deliver and Terminate
                             // TODO: Check if the node already received coms from the sender or not before returning ACSSDeliver
                             if *count >= 2 * self.params.node.get_threshold() + 1 {
                                 if bmsg.is_some() && pmsg.is_some() {
+                                    self.params.handle.handle_stats_event("RBC Delivered!");
                                     let deliver = RBCDeliver::new(bmsg.unwrap(), pmsg.unwrap(), sender);
                                     self.params.tx.send(deliver).await.expect("Send to parent failed!");
                                 } else { 
@@ -292,11 +291,18 @@ impl<B,P,F> RBCReceiver<B,P,F>
         }
     }
 
-    async fn send_ready(&mut self, ready_sent: &mut bool, digest: [u8; 32]) {
+    async fn send_ready(&mut self, ready_sent: &mut bool, digest: [u8; 32], echo: bool) {
         if !*ready_sent {
             *ready_sent = true;
             let ready = ReadyMsg::new(digest.clone());
             self.params.handle.broadcast(&self.params.id, &ready).await;
+            
+            // FIXME: Not so beautiful code
+            if echo{
+                self.params.handle.handle_stats_event("Send ready from echo");
+            } else {
+                self.params.handle.handle_stats_event("Send ready from ready");
+            }
         }
     }
 }
