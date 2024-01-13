@@ -22,5 +22,5 @@ REGIONS = {
         "ca-central-1": ("ami-0b8f000719123a451", "vpc-dff79eb7"),
         "eu-west-1": ("ami-02a66cf05465c373f", "vpc-43d9dc25"),
         "ap-northeast-1": ("ami-027a31eff54f1fe4c", "vpc-07a28d60"),
-        "ap-southeast-1": ("ami-01128ea8b62b5930e", "vpc-b31c2ed4"),
+        "ap-southeast-1": ("ami-05f23df0095de71bb", "vpc-b31c2ed4"),
 }
