@@ -234,8 +234,7 @@ fn main() -> Result<()> {
                 let self_idx = node.get_own_idx();
                 let mut rx;
                 
-                // Start timer
-                handle.handle_stats_start("Node");
+                
                 match acss_type {
                     ACSSType::Yurek => {
                         let ekeys = yurek_params(n, bases);
@@ -246,6 +245,8 @@ fn main() -> Result<()> {
 
                         thread::sleep(start_delay);
 
+                        // Start timer
+                        handle.handle_stats_start("Node");
                         if sender == self_idx {
                             let params = YurekSenderParams::new(sc, s, bases, ekeys);
                             let _ = run_protocol!(YurekSender, handle.clone(), Arc::new(node), id, dst, params);
@@ -260,6 +261,10 @@ fn main() -> Result<()> {
                         };
 
                         thread::sleep(start_delay);
+                        
+                        // Start timer
+                        handle.handle_stats_start("Node");
+
                         if sender == self_idx {
                             let params = LowEdSenderParams::new(bases, vkeys, sc, s);
                             let _ = run_protocol!(LowEdSender, handle.clone(), Arc::new(node), id, dst, params);
@@ -274,6 +279,9 @@ fn main() -> Result<()> {
 
                         thread::sleep(start_delay);
 
+                        // Start timer
+                        handle.handle_stats_start("Node");
+                        
                         if sender == self_idx {
                             let params = LowBLSSenderParams::new(bases, vks, sc, s);
                             let _ = run_protocol!(LowBLSSender, handle.clone(), Arc::new(node), id, dst, params);
@@ -289,6 +297,9 @@ fn main() -> Result<()> {
 
                         thread::sleep(start_delay);
 
+                        // Start timer
+                        handle.handle_stats_start("Node");
+                        
                         if sender == self_idx {
                             let params = MixedEdSenderParams::new(bases, vkeys, ekeys, sc, s, wait);
                             let _ = run_protocol!(MixedEdSender, handle.clone(), Arc::new(node), id, dst, params);
@@ -304,6 +315,9 @@ fn main() -> Result<()> {
 
                         thread::sleep(start_delay);
 
+                        // Start timer
+                        handle.handle_stats_start("Node");
+                        
                         if sender == self_idx {
                             let params = MixedBLSSenderParams::new(bases, vkeys, ekeys, sc, s, wait);
                             let _ = run_protocol!(MixedBLSSender, handle.clone(), Arc::new(node), id, dst, params);
@@ -319,6 +333,9 @@ fn main() -> Result<()> {
 
                         thread::sleep(start_delay);
 
+                        // Start timer
+                        handle.handle_stats_start("Node");
+                        
                         if sender == self_idx {
                             let params = GrothSenderParams::new(sc, s, bases, ekeys);
                             let _ = run_protocol!(GrothSender, handle.clone(), Arc::new(node), id, dst, params);
@@ -349,6 +366,8 @@ fn main() -> Result<()> {
                                 let label = handle_stat.get_label();
                                 if label.is_some() && label.as_ref().unwrap() == "Node" {
                                     // csv node_id,sent_bytes,sent_count,duration
+                                    // let total_duration = handle_stat.duration().expect("No duration!");
+                                    // let duartion = total_duration-start_delay;
                                     println!("{},{},{},{}", self_idx,
                                              manager_stats.sent_bytes(),
                                              manager_stats.sent_count(),

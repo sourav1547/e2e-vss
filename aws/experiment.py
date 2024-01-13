@@ -23,7 +23,7 @@ def experiment(trial, repetitions, timeout, acss_type, deg, seed, wait_time):
         outputs = {}
         for i in range(0, repetitions):
             print(f"Experiment {i}...")
-            cmd = "cli run -c node.cfg -s partial"
+            cmd = "cli run -c node.cfg -s full"
             if acss_type:
                 cmd += f" -a '{acss_type}' -d '{deg}' -p '{seed}' -w '{wait_time}'"
             print(cmd)
