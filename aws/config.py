@@ -15,11 +15,10 @@ OPEN_PORTS = [
 ]
 # Region: (AMI, VPC)
 REGIONS = {
-        "us-east-2": ("ami-0c2f3d2ee24929520", "vpc-17ecf57f"),
-        # "us-east-1": ("ami-05fa00d4c63e32376", "vpc-09750316c0cd0d450"),
-        # "us-east-2": ("ami-0568773882d492fc8", "vpc-083a279f83f3aa65b"),
-        # "us-west-1": ("ami-018d291ca9ffc002f", "vpc-09983ca9a25ee7160"),
-        # "us-west-2": ("ami-0c2ab3b8efb09f272", "vpc-0301fd75a5b74770b"),
+        "us-east-2": ("ami-0cd3c7f72edd5b06d", "vpc-17ecf57f"),
+        "us-east-1": ("ami-0005e0cfe09cc9050", "vpc-850798ff"),
+        "us-west-1": ("ami-0a5ed7a812aeb495a", "vpc-ca615aad"),
+        "us-west-2": ("ami-0944e91aed79c721c", "vpc-b6c46cce"),
         # "ca-central-1": ("ami-06b0bb707079eb96a", "vpc-0572b93cbb72a0a0f"),
         # "ap-northeast-1": ("ami-0f36dcfcc94112ea1", "vpc-0762764d4ebbedf85"),
         # "ap-southeast-1": ("ami-0b89f7b3f054b957e", "vpc-07f97852441242076"),

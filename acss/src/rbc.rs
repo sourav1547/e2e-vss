@@ -260,7 +260,7 @@ impl<B,P,F> RBCReceiver<B,P,F>
                             }
 
                             // Deliver and Terminate
-                            // TODO: Check if the node already received coms from the sender or not before returning ACSSDeliver
+                            // TODO: Check if the node already received coms from the sender or not before returning RBCDeliver
                             if *count >= 2 * self.params.node.get_threshold() + 1 {
                                 if bmsg.is_some() && pmsg.is_some() {
                                     self.params.handle.handle_stats_event("RBC Delivered!");
