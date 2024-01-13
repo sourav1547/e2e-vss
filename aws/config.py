@@ -6,7 +6,7 @@ ACSS_PORT = 13021
 BENCH_RESULT_DIR="experiments"
 
 # EC2 Config
-INSTANCE_TYPE = "m4.xlarge"
+INSTANCE_TYPE = "c5.2xlarge"
 IAM_INSTANCE_PROFILE = {
         "Arn": "arn:aws:iam::395431295218:instance-profile/vss",
 }
