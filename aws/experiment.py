@@ -54,8 +54,6 @@ if __name__ == "__main__":
         deg = sys.argv[5]
         seed = sys.argv[6]
         wait_time = sys.argv[7]
-        # if not re.fullmatch(r"\d+/\d+", prob):
-        #     bail(f"PROBABILIY {prob} is not a fraction!")
     try:
         repetitions = int(sys.argv[2])
     except ValueError:

@@ -330,6 +330,9 @@ fn main() -> Result<()> {
                 // End timer
                 handle.handle_stats_end().await;
 
+                // Waiting for sometime before shutting down, so others can finish.
+                thread::sleep(start_delay);
+
                 // Stats
                 let manager_stats = handle.sender_stats().await;
                 // Shutdown handle gracefully
