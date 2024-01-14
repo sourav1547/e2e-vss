@@ -11,3 +11,9 @@
 * You need `nix` to build the binary.
 * The instance must have some reasonably recent processors that support certain instruction sets (I believe AVX2).
 * You can add nodes to the network by running steps 3-5 again.
+
+### Helper commands for AWS experiments
+* Here the environment variable `vss_main` stores the instance id of the `vss-main`
+* To start the vss_main instance: `aws ec2 start-instances --instance-ids $vss_main`
+* To get the public ip: `aws ec2 describe-instances --instance-ids $vss_main --query 'Reservations[*].Instances[*].PublicIpAddress'`
+* To stop the vss_main instance: `aws ec2 stop-instances --instance-ids $vss_main`
