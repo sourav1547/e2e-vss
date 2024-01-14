@@ -71,7 +71,8 @@ def experiment(trial, repetitions, timeout, acss_type, deg, seed, wait_time):
                 print("")
                 print(f"{'Latency:':<15}{round(dealer_latency, 2):<20}{'Dealer BW (KBytes):':<25}{round(dealer_sent, 2):<20}{'Dealer Msg Count:':<20}{round(dealer_count, 2)}")
                 
-                print(f"{'Rcv Latency:':<15}{round(rcv_avg_latency, 2):<20}{'Rcv BW (KBytes):':<25}{round(rcv_avg_byte_sent, 2):<20}{'Rcv Msg Count:':<20}{round(rcv_avg_msg_count, 2)}")
+                # print(f"{'Rcv Latency:':<15}{round(rcv_avg_latency, 2):<20}{'Rcv BW (KBytes):':<25}{round(rcv_avg_byte_sent, 2):<20}{'Rcv Msg Count:':<20}{round(rcv_avg_msg_count, 2)}")
+                print(f"{'Rcv BW (KBytes):':<25}{round(rcv_avg_byte_sent, 2):<20}{'Rcv Msg Count:':<20}{round(rcv_avg_msg_count, 2)}")
 
                 print("-"*50)
 
@@ -82,7 +83,7 @@ def experiment(trial, repetitions, timeout, acss_type, deg, seed, wait_time):
                 }
 
                 non_dealer_stats = {
-                    "Rcv Latency": round(rcv_avg_latency, 2),
+                    # "Rcv Latency": round(rcv_avg_latency, 2),
                     "Rcv BW (KBytes)": round(rcv_avg_byte_sent, 2),
                     "Rcv Msg Count": round(rcv_avg_msg_count, 2)
                 }
@@ -93,7 +94,7 @@ def experiment(trial, repetitions, timeout, acss_type, deg, seed, wait_time):
                 ad_stats["bw"].append(dealer_sent)
                 ad_stats["msg_count"].append(dealer_count)
 
-                ar_stats["latency"].append(rcv_avg_latency)
+                # ar_stats["latency"].append(rcv_avg_latency)
                 ar_stats["bw"].append(rcv_avg_byte_sent)
                 ar_stats["msg_count"].append(rcv_avg_msg_count)
     
@@ -103,7 +104,7 @@ def experiment(trial, repetitions, timeout, acss_type, deg, seed, wait_time):
         ad_bw = round(mean(ad_stats["bw"]), 2)
         ad_msg_count = round(mean(ad_stats["msg_count"]),2)
 
-        ar_latency = round(mean(ar_stats["latency"]),2)
+        # ar_latency = round(mean(ar_stats["latency"]),2)
         ar_bw = round(mean(ar_stats["bw"]),2)
         ar_msg_count = round(mean(ar_stats["msg_count"]),2)
 
@@ -115,14 +116,14 @@ def experiment(trial, repetitions, timeout, acss_type, deg, seed, wait_time):
         }
 
         ar_stats = {
-            "Rcv Latency": ar_latency,
+            # "Rcv Latency": ar_latency,
             "Rcv BW (KBytes)": ar_bw,
             "Rcv Msg Count": ar_msg_count
         }
 
         print(f"{'Latency:':<15}{ad_latency:<20}{'Dealer BW (KBytes):':<25}{ad_bw:<20}{'Dealer Msg Count:':<20}{ad_msg_count}")
-                
-        print(f"{'Rcv Latency:':<15}{ar_latency:<20}{'Rcv BW (KBytes):':<25}{ar_bw:<20}{'Rcv Msg Count:':<20}{ar_msg_count}")
+        print(f"{'Rcv BW (KBytes):':<25}{ar_bw:<20}{'Rcv Msg Count:':<20}{ar_msg_count}")
+        # print(f"{'Rcv Latency:':<15}{ar_latency:<20}{'Rcv BW (KBytes):':<25}{ar_bw:<20}{'Rcv Msg Count:':<20}{ar_msg_count}")
     
         data = {
                 "trial": trial,

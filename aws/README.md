@@ -1,3 +1,5 @@
+NOTE: I have only test this on a Ubuntu 22.04.3 LTS machine
+
 # Deploy to AWS
 1. Set credentials in the environment, i.e., set the environment variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` with appropriate values. You can also use `setup_env.fish` to do that.
 2. Set the regions, instance type, etc. in `config.py`.
