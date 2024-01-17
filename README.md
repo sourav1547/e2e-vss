@@ -42,6 +42,7 @@ In more detail, the code is split across the following crates:
 * `protocol` offers common traits that describe protocols.
 * `crypto` offers some cryptography traits.
 * `cli` is a CLI interface for APSS. After building, run `cli --help` to learn more.
+* `benches` code for micro-benchmarking computation costs.
 
 ## Acknowledgement
 We use the networking component from this https://github.com/ISTA-SPiDerS/apss repository.

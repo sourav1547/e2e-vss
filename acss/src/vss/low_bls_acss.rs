@@ -110,26 +110,27 @@ pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptBLS, sc: &Shari
     let shares = shares.unwrap();
     let randomness = randomness.unwrap();
     
-    // Checking low-degree of the committed polynomial
     assert!(shares.len() == randomness.len());
     assert!(shares.len() == missing_ct);
 
-    let mut missing_coms = Vec::with_capacity(shares.len());
+    // let mut missing_coms = Vec::with_capacity(shares.len());
     let lambdas = {
         let mut rng = thread_rng();
         random_scalars_range(&mut rng, u64::MAX, missing_ct)
     };
 
     // Checking the correctness of the revealed shares and randomness 
-    let mut idx = 0;
     let mut s = Scalar::zero();
     let mut r = Scalar::zero();
-    for pos in 0..n {
-        if !t.agg_sig().get_signers_bitvec().is_set(pos as u16) {
-            s += lambdas[idx]*shares[idx];
-            r += lambdas[idx]*randomness[idx];
-            
-            idx +=1;
+    for (lambda, (share, rand)) in lambdas.iter().zip(shares.iter().zip(randomness.iter())) {
+        s += lambda*share;
+        r += lambda*rand;
+    }
+    
+    let mut missing_coms = Vec::with_capacity(shares.len());
+    let signer_bitvec = t.agg_sig().get_signers_bitvec();
+    for pos in 0..sc.n {
+        if !signer_bitvec.is_set(pos as u16) {            
             missing_coms.push(coms[pos]);
         }
     }

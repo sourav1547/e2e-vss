@@ -86,15 +86,11 @@ mod mixed_bls_acss {
                 let root: [u8; 32] = hasher.finalize().into();
 
                 // 4. Verifying the individual ACK signatures
-                for (sig, pk) in sigs.iter().zip(vkeys.iter()) {
-                    assert!(sig.verify_arbitrary_msg(&root, pk).is_ok());
-                }
+                assert!(sigs.iter().zip(vkeys.iter()).all(|(sig, pk)| sig.verify_arbitrary_msg(&root, pk).is_ok()));
 
-                // 4. Computing the rest of the transcript
+                // 5. Computing the rest of the transcript
                 let mut signers = vec![false; n];
-                for i in 0..(deg+1) {
-                    signers[i] = true;
-                }
+                signers.iter_mut().take(deg + 1).for_each(|s| *s = true);
                 mixed_bls_acss::get_transcript(&coms, &shares, &signers, &sigs, &params, t);
             })
         });
@@ -143,18 +139,15 @@ mod mixed_bls_acss {
 
                 let trx = mixed_bls_acss::get_transcript(&coms, &shares, &signers, &sigs, &params, t);
 
-                (coms, trx, shares[0])
-            }, |(coms, trx, share)| {
+                (coms, trx, shares[0], root)
+            }, |(coms, trx, share, root)| {
                 // 1. Checking the low-degree test and checking correctness of the shares
                 assert!(share_verify(0, &coms, &share, &bases, &sc));
 
-                // 2. Computing the digest of the coms vector
-                let mut hasher = Sha256::new();
-                hasher.update(bcs::to_bytes(&coms).unwrap());
-                let root: [u8; 32] = hasher.finalize().into();
-
-                // 3. Computing the signature
+                // 2. Computing the signature
                 Some(skeys[0].sign_arbitrary_message(root.as_slice())).unwrap();
+
+                // 3. Verify the rest of the transcript
                 assert!(mixed_bls_acss::verify_transcript(&coms, &trx, &rcv_params));
             })
         });

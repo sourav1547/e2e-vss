@@ -9,7 +9,7 @@ pub fn vss_low_ed_group(c: &mut Criterion) {
 
     for (&t, &n) in ts.iter().zip(ns.iter()) {
         low_ed_acss::vss_deal(t, n, &mut group);
-        low_ed_acss::vss_verify(t, n, &mut group);
+        // low_ed_acss::vss_verify(t, n, &mut group);
     }
 
     group.finish();
@@ -78,15 +78,11 @@ mod low_ed_acss {
                 let root: [u8; 32] = hasher.finalize().into();
 
                 // 4. Verifying the individual ACK signatures
-                for (sig, pk) in sigs.iter().zip(vkeys.iter()) {
-                    assert!(sig.verify_arbitrary_msg(&root, pk).is_ok());
-                }
+                assert!(sigs.iter().zip(vkeys.iter()).all(|(sig, pk)| sig.verify_arbitrary_msg(&root, pk).is_ok()));
 
-                // 4. Computing the rest of the transcript
+                // 5. Computing the rest of the transcript
                 let mut signers = vec![false; n];
-                for i in 0..(deg+1) {
-                    signers[i] = true;
-                }
+                signers.iter_mut().take(deg + 1).for_each(|s| *s = true);
                 low_ed_acss::get_transcript(&shares, &signers, sigs);
             })
         });
@@ -129,20 +125,15 @@ mod low_ed_acss {
                 }
                 let trx = low_ed_acss::get_transcript(&shares, &signers, sigs);
 
-                (coms, shares[0], trx)
-            }, |(coms, share, trx)| {
+                (coms, shares[0], trx, root)
+            }, |(coms, share, trx, root)| {
                 // 1. Checking the low-degree test and checking correctness of the shares
                 assert!(share_verify(0, &coms, &share, &bases, &sc));
 
-                // 2. Computing the digest of the coms vector
-                let mut hasher = Sha256::new();
-                hasher.update(bcs::to_bytes(&coms).unwrap());
-                let root: [u8; 32] = hasher.finalize().into();
-
-                // 3. Computing the signature
+                // 2. Computing the signature. Not benchmarking the cost to compute teh root as we compute the root inside the verify_transcript function
                 Some(skeys[0].sign_arbitrary_message(root.as_slice())).unwrap();
 
-                // 4. Verifying the broadcast transcript
+                // 3. Verifying the broadcast transcript
                 assert!(low_ed_acss::verify_transcript(&coms, &trx, &sc, &bases, &vkeys)); 
             })
         });

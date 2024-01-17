@@ -112,30 +112,30 @@ pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptEd, sc: &Sharin
     if missing_ct == 0 {
         return agg_sig.verify(root.as_slice(), &mpk);
     }
-
+    
     let shares = shares.unwrap();
     let randomness = randomness.unwrap();
     
-    // Checking low-degree of the committed polynomial
     assert!(shares.len() == randomness.len());
     assert!(shares.len() == missing_ct);
 
-
-    let mut missing_coms = Vec::with_capacity(shares.len());
-
-    let mut rng = thread_rng();
-    let lambdas = random_scalars_range(&mut rng, u64::MAX, missing_ct);
+    let lambdas = {
+        let mut rng = thread_rng();
+        random_scalars_range(&mut rng, u64::MAX, missing_ct)
+    };
 
     // Checking the correctness of the revealed shares and randomness 
-    let mut idx = 0;
     let mut s = Scalar::zero();
     let mut r = Scalar::zero();
+    for (lambda, (share, rand)) in lambdas.iter().zip(shares.iter().zip(randomness.iter())) {
+        s += lambda*share;
+        r += lambda*rand;
+    }
+    
+    let mut missing_coms = Vec::with_capacity(shares.len());
+    let signer_bitvec = t.agg_sig().get_signers_bitvec();
     for pos in 0..sc.n {
-        if !t.agg_sig().get_signers_bitvec().is_set(pos as u16) {
-            s += lambdas[idx]*shares[idx];
-            r += lambdas[idx]*randomness[idx];
-            
-            idx +=1;
+        if !signer_bitvec.is_set(pos as u16) {            
             missing_coms.push(coms[pos]);
         }
     }
@@ -143,7 +143,7 @@ pub fn verify_transcript(coms: &Vec<G1Projective>, t: &TranscriptEd, sc: &Sharin
     let com_pos = G1Projective::multi_exp(bases, [s, r].as_slice());
     let com = G1Projective::multi_exp(&missing_coms, &lambdas);
     
-    com_pos == com
+    agg_sig.verify(root.as_slice(), &mpk) && com.eq(&com_pos)
 }
 
 impl LowEdSender {
