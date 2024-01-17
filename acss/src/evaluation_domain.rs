@@ -30,7 +30,7 @@ pub struct EvaluationDomain {
 /// This is very useful when doing FFTs of different sizes (e.g., 1, 2, 4, 8, 16, ... in an accumulator-style
 /// polynomial multiplication; see `accumulator_poly` function) and we want to avoid recomputing the
 /// same roots of unity multiple times, as well as other scalars.
-#[allow(non_snake_cas)]
+#[allow(non_snake_case)]
 #[derive(Clone)]
 pub struct BatchEvaluationDomain {
     /// $\log_2{N}$

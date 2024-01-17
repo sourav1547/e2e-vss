@@ -31,6 +31,9 @@ Finally, to kill any running instances, use `pkill -f "./target/release/cli"`.
 ### Running on AWS 
 `aws/` contains Python scripts to deploy and benchmark the system on AWS. Check out the README in the directory for more details.
 
+### Microbenchmarking computation costs
+To microbenchmark the the computation costs, change directory to `benches` using `cd benches/`, and run  `cargo bench [EXPT]`. Here, choices of `EXPT` are `yurek`, `low-ed`, `low-bls`, `mix-ed`, `mix-bls`, `groth`, and `common`. Each `EXPT` with an acss type, measures the dealing-time and verification time. The `common` benchmarks the cost of reconstruction, and low-degree test.
+
 ## Structure
 In more detail, the code is split across the following crates:
 * `acss` is where most of our code lies.

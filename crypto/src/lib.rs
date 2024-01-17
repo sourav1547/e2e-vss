@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-use std::ops::{Add, AddAssign, Mul, MulAssign, Sub, SubAssign};
-use anyhow::Result;
+use std::ops::{AddAssign, Mul, MulAssign, Sub, SubAssign};
 
 pub use anyhow;
 pub use num_traits::Zero;

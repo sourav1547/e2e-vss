@@ -1,11 +1,12 @@
 [package]
-name = "acss"
+name = "benches"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+acss = { path = "../acss" }
 crypto = { path = "../crypto" }
 network = { path = "../network" }
 protocol = { path = "../protocol" }
@@ -44,3 +45,38 @@ sha2 = "0.10.2"
 
 [features]
 assert-private-keys-not-cloneable = []
+
+[[bench]]
+name = "common"
+path = "src/common.rs"
+harness = false
+
+[[bench]]
+name = "yurek"
+path = "src/yurek_acss.rs"
+harness = false
+
+[[bench]]
+name = "low-ed"
+path = "src/low_ed_acss.rs"
+harness = false
+
+[[bench]]
+name = "low-bls"
+path = "src/low_bls_acss.rs"
+harness = false
+
+[[bench]]
+name = "mix-ed"
+path = "src/mixed_ed_acss.rs"
+harness = false
+
+[[bench]]
+name = "mix-bls"
+path = "src/mixed_bls_acss.rs"
+harness = false
+
+[[bench]]
+name = "groth"
+path = "src/groth_ni_acss.rs"
+harness = false
