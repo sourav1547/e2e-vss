@@ -58,7 +58,8 @@ impl<T> Cache<T>
                         // down the listener (and thus all receivers) before shutting down the cache.
                         close_and_drain!(self.receivers);
                         log::debug!("Shut down.");
-                        println!("Cache received {} messages with a total size of {} bytes.", self.recv_count, self.recv_bytes);
+                        // println!("Cache received {} messages with a total size of {} bytes.", self.recv_count, self.recv_bytes);
+                        println!("{},{}", self.recv_count, self.recv_bytes);
                         shutdown_done!(tx);
                     },
                     msg => self.handle_cache_msg(msg).await,

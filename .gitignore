@@ -18,3 +18,4 @@ stats.svg
 /out/
 result*
 */__pycache__/
+aws/experiments/

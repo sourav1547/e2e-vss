@@ -25,8 +25,8 @@ def experiment(trial, repetitions, timeout, acss_type, deg, seed, wait_time):
         outputs = {}
         stats = {}
 
-        ad_stats = {"latency": [], "bw": [], "msg_count":[]}
-        ar_stats = {"latency": [], "bw": [], "msg_count":[]}
+        ad_stats = {"latency": [], "bandwidth": [], "msg_count":[]}
+        ar_stats = {"latency": [], "bandwidth": [], "msg_count":[]}
 
         for i in range(0, repetitions):
             print(f"Experiment {i}...")
@@ -42,87 +42,102 @@ def experiment(trial, repetitions, timeout, acss_type, deg, seed, wait_time):
                 dealer_latency = 0
                 dealer_sent = 0
                 dealer_count = 0
+                timeout_count = 0
 
-                rcv_stats = {"latency":[], "msg_count":[], "byte_sent":[]}
+                rcv_stats = {"latency":[], "msg_count":[], "bandwidth":[]}
                 for value in outputs[i]:
                     if value == "TimedOut":
+                        timeout_count += 1
                         continue 
-                    data = value.split(",")
-                    data = list(map(int, value.split(",")))
-                    idx, byte_sent, msg_count, latency = data[0], data[1], data[2], data[3]
+                    v1, v2 = value.split("\n")
+                    v1_data = list(map(int, v1.split(",")))
+                    v2_data = list(map(int, v2.split(",")))
+                    
+                    sent = v1_data
+                    rcvd = v2_data
+                    if len(sent) == 2:
+                        sent = v2_data
+                        rcvd = v1_data
+                    
+                    idx, byte_sent, sent_count, latency = sent[0], sent[1], sent[2], sent[3]
+                    rcvd_count, byte_rcvd = rcvd[0], rcvd[1]
 
                     if idx == 0:
-                        dealer_latency = latency
-                        dealer_sent = byte_sent/2**10
-                        dealer_count = msg_count
+                        dealer_lt = latency
+                        dealer_bw = (byte_sent + byte_rcvd)/2**10
+                        dealer_mc = sent_count + rcvd_count
                     
                     if idx != 0:
                         rcv_stats["latency"].append(latency)
-                        rcv_stats["msg_count"].append(msg_count)
-                        rcv_stats["byte_sent"].append(byte_sent)
+                        rcv_stats["msg_count"].append(sent_count + rcvd_count )
+                        rcv_stats["bandwidth"].append(byte_sent + byte_rcvd)
                 
-                rcv_avg_latency = mean(rcv_stats["latency"])
-                rcv_avg_msg_count = mean(rcv_stats["msg_count"])
-                rcv_avg_byte_sent = mean(rcv_stats["byte_sent"])/2**10
+                rcv_avg_lt = mean(rcv_stats["latency"])
+                rcv_avg_mc = mean(rcv_stats["msg_count"])
+                rcv_avg_bw = mean(rcv_stats["bandwidth"])/2**10
 
-                dealer_count -= rcv_avg_msg_count
-                dealer_sent -= rcv_avg_byte_sent
+                dealer_mc -= rcv_avg_mc
+                dealer_bw -= rcv_avg_bw
 
                 print("")
-                print(f"{'Latency:':<15}{round(dealer_latency, 2):<20}{'Dealer BW (KBytes):':<25}{round(dealer_sent, 2):<20}{'Dealer Msg Count:':<20}{round(dealer_count, 2)}")
+                print(f"{'Latency:':<25}{round(dealer_lt, 2):<20}")
+                print(f"{'Dealer BW (KBytes):':<25}{round(dealer_bw, 2):<20}{'Dealer Msg Count:':<20}{round(dealer_mc, 2)}")
                 
                 # print(f"{'Rcv Latency:':<15}{round(rcv_avg_latency, 2):<20}{'Rcv BW (KBytes):':<25}{round(rcv_avg_byte_sent, 2):<20}{'Rcv Msg Count:':<20}{round(rcv_avg_msg_count, 2)}")
-                print(f"{'Rcv BW (KBytes):':<25}{round(rcv_avg_byte_sent, 2):<20}{'Rcv Msg Count:':<20}{round(rcv_avg_msg_count, 2)}")
+                print(f"{'Rcv BW (KBytes):':<25}{round(rcv_avg_bw, 2):<20}{'Rcv Msg Count:':<20}{round(rcv_avg_mc, 2)}")
+
+                print(f"Number of timeouts: {timeout_count}")
 
                 print("-"*50)
 
                 dealer_stats = {
-                    "Latency": round(dealer_latency, 2),
-                    "Dealer BW (KBytes)": round(dealer_sent, 2),
-                    "Dealer Msg Count": round(dealer_count, 2)
+                    "Latency": round(dealer_lt, 2),
+                    "Dealer BW (KBytes)": round(dealer_bw, 2),
+                    "Dealer Msg Count": round(dealer_mc, 2)
                 }
 
                 non_dealer_stats = {
                     # "Rcv Latency": round(rcv_avg_latency, 2),
-                    "Rcv BW (KBytes)": round(rcv_avg_byte_sent, 2),
-                    "Rcv Msg Count": round(rcv_avg_msg_count, 2)
+                    "Rcv BW (KBytes)": round(rcv_avg_bw, 2),
+                    "Rcv Msg Count": round(rcv_avg_mc, 2)
                 }
 
                 stats[i] = {"dealer_stats": dealer_stats, "non_dealer_stats": non_dealer_stats}
 
-                ad_stats["latency"].append(dealer_latency)
-                ad_stats["bw"].append(dealer_sent)
-                ad_stats["msg_count"].append(dealer_count)
+                ad_stats["latency"].append(dealer_lt)
+                ad_stats["bandwidth"].append(dealer_bw)
+                ad_stats["msg_count"].append(dealer_mc)
 
                 # ar_stats["latency"].append(rcv_avg_latency)
-                ar_stats["bw"].append(rcv_avg_byte_sent)
-                ar_stats["msg_count"].append(rcv_avg_msg_count)
+                ar_stats["bandwidth"].append(rcv_avg_bw)
+                ar_stats["msg_count"].append(rcv_avg_mc)
     
         print("------------- Avergage of Average -------------")
 
-        ad_latency = round(mean(ad_stats["latency"]), 2)
-        ad_bw = round(mean(ad_stats["bw"]), 2)
-        ad_msg_count = round(mean(ad_stats["msg_count"]),2)
+        ad_lt = round(mean(ad_stats["latency"]), 2)
+        ad_bw = round(mean(ad_stats["bandwidth"]), 2)
+        ad_mc = round(mean(ad_stats["msg_count"]),2)
 
         # ar_latency = round(mean(ar_stats["latency"]),2)
-        ar_bw = round(mean(ar_stats["bw"]),2)
-        ar_msg_count = round(mean(ar_stats["msg_count"]),2)
+        ar_bw = round(mean(ar_stats["bandwidth"]),2)
+        ar_mc = round(mean(ar_stats["msg_count"]),2)
 
 
         ad_stats = {
-            "Latency": ad_latency,
+            "Latency": ad_lt,
             "Dealer BW (KBytes)": ad_bw,
-            "Dealer Msg Count": ad_msg_count
+            "Dealer Msg Count": ad_mc
         }
 
         ar_stats = {
-            # "Rcv Latency": ar_latency,
+            # "Rcv Latency": ar_lt,
             "Rcv BW (KBytes)": ar_bw,
-            "Rcv Msg Count": ar_msg_count
+            "Rcv Msg Count": ar_mc
         }
 
-        print(f"{'Latency:':<15}{ad_latency:<20}{'Dealer BW (KBytes):':<25}{ad_bw:<20}{'Dealer Msg Count:':<20}{ad_msg_count}")
-        print(f"{'Rcv BW (KBytes):':<25}{ar_bw:<20}{'Rcv Msg Count:':<20}{ar_msg_count}")
+        print(f"{'Latency:':<25}{ad_lt:<20}")
+        print(f"{'Dealer BW (KBytes):':<25}{ad_bw:<20}{'Dealer Msg Count:':<20}{ad_mc}")
+        print(f"{'Rcv BW (KBytes):':<25}{ar_bw:<20}{'Rcv Msg Count:':<20}{ar_mc}")
         # print(f"{'Rcv Latency:':<15}{ar_latency:<20}{'Rcv BW (KBytes):':<25}{ar_bw:<20}{'Rcv Msg Count:':<20}{ar_msg_count}")
     
         data = {
