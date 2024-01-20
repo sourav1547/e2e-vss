@@ -1,0 +1,314 @@
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running src/common.rs (/home/ubuntu/e2e-vss/target/release/deps/common-6c9ec88949bb042b)
+common/recon-42/64      time:   [7.0630 ms 7.0638 ms 7.0649 ms]
+                        thrpt:  [9.0589 Kelem/s 9.0603 Kelem/s 9.0613 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+common/low-deg-test-42/64
+                        time:   [574.93 µs 580.56 µs 583.35 µs]
+                        thrpt:  [109.71 Kelem/s 110.24 Kelem/s 111.32 Kelem/s]
+common/recon-84/128     time:   [14.050 ms 14.051 ms 14.053 ms]
+                        thrpt:  [9.1084 Kelem/s 9.1096 Kelem/s 9.1104 Kelem/s]
+common/low-deg-test-84/128
+                        time:   [1.1022 ms 1.1044 ms 1.1066 ms]
+                        thrpt:  [115.67 Kelem/s 115.90 Kelem/s 116.13 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+common/recon-170/256    time:   [28.447 ms 28.452 ms 28.457 ms]
+                        thrpt:  [8.9960 Kelem/s 8.9976 Kelem/s 8.9991 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+common/low-deg-test-170/256
+                        time:   [2.2209 ms 2.2265 ms 2.2327 ms]
+                        thrpt:  [114.66 Kelem/s 114.98 Kelem/s 115.27 Kelem/s]
+Benchmarking common/recon-340/512: Warming up for 3.0000 s
+Warning: Unable to complete 10 samples in 5.0s. You may wish to increase target time to 7.8s or enable flat sampling.
+common/recon-340/512    time:   [57.093 ms 57.100 ms 57.109 ms]
+                        thrpt:  [8.9653 Kelem/s 8.9667 Kelem/s 8.9678 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+common/low-deg-test-340/512
+                        time:   [4.8311 ms 4.8348 ms 4.8419 ms]
+                        thrpt:  [105.74 Kelem/s 105.90 Kelem/s 105.98 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+common/recon-682/1024   time:   [115.26 ms 115.28 ms 115.31 ms]
+                        thrpt:  [8.8806 Kelem/s 8.8824 Kelem/s 8.8843 Kelem/s]
+Benchmarking common/low-deg-test-682/1024: Warming up for 3.0000 s
+Warning: Unable to complete 10 samples in 5.0s. You may wish to increase target time to 9.8s or enable flat sampling.
+common/low-deg-test-682/1024
+                        time:   [10.748 ms 10.783 ms 10.847 ms]
+                        thrpt:  [94.403 Kelem/s 94.966 Kelem/s 95.272 Kelem/s]
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+common/recon-21/64      time:   [3.6212 ms 3.6217 ms 3.6221 ms]
+                        thrpt:  [17.669 Kelem/s 17.671 Kelem/s 17.674 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+common/low-deg-test-21/64
+                        time:   [593.91 µs 597.73 µs 602.95 µs]
+                        thrpt:  [106.15 Kelem/s 107.07 Kelem/s 107.76 Kelem/s]
+common/recon-42/128     time:   [7.0760 ms 7.0764 ms 7.0770 ms]
+                        thrpt:  [18.087 Kelem/s 18.088 Kelem/s 18.089 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+common/low-deg-test-42/128
+                        time:   [1.1415 ms 1.1456 ms 1.1486 ms]
+                        thrpt:  [111.44 Kelem/s 111.73 Kelem/s 112.14 Kelem/s]
+common/recon-85/256     time:   [14.219 ms 14.226 ms 14.236 ms]
+                        thrpt:  [17.983 Kelem/s 17.996 Kelem/s 18.004 Kelem/s]
+common/low-deg-test-85/256
+                        time:   [2.3072 ms 2.3134 ms 2.3197 ms]
+                        thrpt:  [110.36 Kelem/s 110.66 Kelem/s 110.96 Kelem/s]
+common/recon-170/512    time:   [28.472 ms 28.480 ms 28.487 ms]
+                        thrpt:  [17.973 Kelem/s 17.978 Kelem/s 17.983 Kelem/s]
+common/low-deg-test-170/512
+                        time:   [5.0189 ms 5.0267 ms 5.0352 ms]
+                        thrpt:  [101.68 Kelem/s 101.86 Kelem/s 102.01 Kelem/s]
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) low mild
+  1 (10.00%) high severe
+common/recon-341/1024   time:   [57.345 ms 57.369 ms 57.394 ms]
+                        thrpt:  [17.841 Kelem/s 17.849 Kelem/s 17.857 Kelem/s]
+common/low-deg-test-341/1024
+                        time:   [11.028 ms 11.031 ms 11.035 ms]
+                        thrpt:  [92.792 Kelem/s 92.830 Kelem/s 92.858 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+
+groth/deal-21/64        time:   [229.21 ms 233.34 ms 238.21 ms]
+                        thrpt:  [268.67  elem/s 274.27  elem/s 279.22  elem/s]
+groth/verify-21/64      time:   [150.31 ms 150.54 ms 150.76 ms]
+                        thrpt:  [424.52  elem/s 425.15  elem/s 425.77  elem/s]
+groth/deal-42/128       time:   [452.68 ms 459.54 ms 466.39 ms]
+                        thrpt:  [274.45  elem/s 278.54  elem/s 282.76  elem/s]
+groth/verify-42/128     time:   [284.50 ms 284.78 ms 285.08 ms]
+                        thrpt:  [448.99  elem/s 449.46  elem/s 449.91  elem/s]
+groth/deal-85/256       time:   [880.93 ms 898.48 ms 918.95 ms]
+                        thrpt:  [278.58  elem/s 284.93  elem/s 290.60  elem/s]
+                 change:
+                        time:   [-1.3305% +0.9710% +3.6366%] (p = 0.49 > 0.05)
+                        thrpt:  [-3.5090% -0.9616% +1.3484%]
+                        No change in performance detected.
+groth/verify-85/256     time:   [546.92 ms 547.16 ms 547.43 ms]
+                        thrpt:  [467.64  elem/s 467.87  elem/s 468.07  elem/s]
+                 change:
+                        time:   [-0.5359% -0.3940% -0.2922%] (p = 0.00 < 0.05)
+                        thrpt:  [+0.2930% +0.3955% +0.5388%]
+                        Change within noise threshold.
+groth/deal-170/512      time:   [1.7818 s 1.8032 s 1.8245 s]
+                        thrpt:  [280.62  elem/s 283.95  elem/s 287.35  elem/s]
+                 change:
+                        time:   [-0.0241% +1.4779% +3.0120%] (p = 0.12 > 0.05)
+                        thrpt:  [-2.9239% -1.4564% +0.0241%]
+                        No change in performance detected.
+groth/verify-170/512    time:   [1.0658 s 1.0662 s 1.0666 s]
+                        thrpt:  [480.04  elem/s 480.22  elem/s 480.39  elem/s]
+                 change:
+                        time:   [-0.4807% -0.4386% -0.3942%] (p = 0.00 < 0.05)
+                        thrpt:  [+0.3958% +0.4406% +0.4830%]
+                        Change within noise threshold.
+groth/deal-341/1024     time:   [3.4670 s 3.4876 s 3.5180 s]
+                        thrpt:  [291.08  elem/s 293.61  elem/s 295.35  elem/s]
+                 change:
+                        time:   [-3.1805% -1.7730% -0.3416%] (p = 0.04 < 0.05)
+                        thrpt:  [+0.3427% +1.8050% +3.2850%]
+                        Change within noise threshold.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+groth/verify-341/1024   time:   [2.1304 s 2.1442 s 2.1577 s]
+                        thrpt:  [474.59  elem/s 477.56  elem/s 480.67  elem/s]
+                 change:
+                        time:   [-1.4392% -0.6212% +0.2168%] (p = 0.16 > 0.05)
+                        thrpt:  [-0.2163% +0.6251% +1.4602%]
+                        No change in performance detected.
+
+low-bls/deal-21/64      time:   [49.827 ms 50.946 ms 51.678 ms]
+                        thrpt:  [1.2384 Kelem/s 1.2562 Kelem/s 1.2844 Kelem/s]
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high mild
+low-bls/verify-21/64    time:   [3.3890 ms 3.3998 ms 3.4091 ms]
+                        thrpt:  [18.774 Kelem/s 18.825 Kelem/s 18.885 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+low-bls/deal-42/128     time:   [97.643 ms 97.949 ms 98.631 ms]
+                        thrpt:  [1.2978 Kelem/s 1.3068 Kelem/s 1.3109 Kelem/s]
+low-bls/verify-42/128   time:   [3.3900 ms 3.3960 ms 3.4002 ms]
+                        thrpt:  [37.645 Kelem/s 37.692 Kelem/s 37.759 Kelem/s]
+low-bls/deal-85/256     time:   [197.78 ms 199.57 ms 201.35 ms]
+                        thrpt:  [1.2714 Kelem/s 1.2827 Kelem/s 1.2944 Kelem/s]
+low-bls/verify-85/256   time:   [5.0169 ms 5.0358 ms 5.0663 ms]
+                        thrpt:  [50.530 Kelem/s 50.836 Kelem/s 51.028 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+low-bls/deal-170/512    time:   [391.17 ms 391.40 ms 391.77 ms]
+                        thrpt:  [1.3069 Kelem/s 1.3081 Kelem/s 1.3089 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+low-bls/verify-170/512  time:   [8.5838 ms 8.6159 ms 8.6495 ms]
+                        thrpt:  [59.194 Kelem/s 59.425 Kelem/s 59.647 Kelem/s]
+low-bls/deal-341/1024   time:   [783.13 ms 785.97 ms 789.95 ms]
+                        thrpt:  [1.2963 Kelem/s 1.3028 Kelem/s 1.3076 Kelem/s]
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+low-bls/verify-341/1024 time:   [16.406 ms 16.448 ms 16.499 ms]
+                        thrpt:  [62.064 Kelem/s 62.255 Kelem/s 62.415 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+
+low-ed/deal-21/64       time:   [13.007 ms 13.008 ms 13.010 ms]
+                        thrpt:  [4.9194 Kelem/s 4.9200 Kelem/s 4.9205 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+low-ed/verify-21/64     time:   [3.1617 ms 3.1648 ms 3.1667 ms]
+                        thrpt:  [20.210 Kelem/s 20.222 Kelem/s 20.242 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+low-ed/deal-42/128      time:   [25.933 ms 25.937 ms 25.941 ms]
+                        thrpt:  [4.9343 Kelem/s 4.9350 Kelem/s 4.9358 Kelem/s]
+low-ed/verify-42/128    time:   [4.1076 ms 4.1116 ms 4.1152 ms]
+                        thrpt:  [31.104 Kelem/s 31.132 Kelem/s 31.161 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+low-ed/deal-85/256      time:   [51.911 ms 51.915 ms 51.919 ms]
+                        thrpt:  [4.9308 Kelem/s 4.9311 Kelem/s 4.9316 Kelem/s]
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) low mild
+  1 (10.00%) high mild
+low-ed/verify-85/256    time:   [7.3500 ms 7.3560 ms 7.3658 ms]
+                        thrpt:  [34.755 Kelem/s 34.801 Kelem/s 34.830 Kelem/s]
+low-ed/deal-170/512     time:   [103.79 ms 103.82 ms 103.87 ms]
+                        thrpt:  [4.9292 Kelem/s 4.9316 Kelem/s 4.9332 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+low-ed/verify-170/512   time:   [13.813 ms 13.824 ms 13.836 ms]
+                        thrpt:  [37.005 Kelem/s 37.036 Kelem/s 37.067 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+low-ed/deal-341/1024    time:   [207.52 ms 207.55 ms 207.59 ms]
+                        thrpt:  [4.9327 Kelem/s 4.9337 Kelem/s 4.9345 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+low-ed/verify-341/1024  time:   [27.083 ms 27.105 ms 27.131 ms]
+                        thrpt:  [37.743 Kelem/s 37.779 Kelem/s 37.809 Kelem/s]
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high mild
+
+mix-bls/deal-21/64      time:   [134.45 ms 136.53 ms 138.71 ms]
+                        thrpt:  [461.39  elem/s 468.76  elem/s 476.03  elem/s]
+mix-bls/verify-21/64    time:   [57.634 ms 57.698 ms 57.761 ms]
+                        thrpt:  [1.1080 Kelem/s 1.1092 Kelem/s 1.1105 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+mix-bls/deal-42/128     time:   [254.99 ms 259.70 ms 264.86 ms]
+                        thrpt:  [483.27  elem/s 492.87  elem/s 501.98  elem/s]
+mix-bls/verify-42/128   time:   [104.75 ms 104.87 ms 104.99 ms]
+                        thrpt:  [1.2191 Kelem/s 1.2206 Kelem/s 1.2219 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+mix-bls/deal-85/256     time:   [485.56 ms 491.02 ms 496.89 ms]
+                        thrpt:  [515.20  elem/s 521.37  elem/s 527.23  elem/s]
+mix-bls/verify-85/256   time:   [193.12 ms 193.50 ms 193.90 ms]
+                        thrpt:  [1.3203 Kelem/s 1.3230 Kelem/s 1.3256 Kelem/s]
+mix-bls/deal-170/512    time:   [963.81 ms 977.96 ms 999.20 ms]
+                        thrpt:  [512.41  elem/s 523.54  elem/s 531.23  elem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+mix-bls/verify-170/512  time:   [376.60 ms 376.81 ms 377.02 ms]
+                        thrpt:  [1.3580 Kelem/s 1.3588 Kelem/s 1.3595 Kelem/s]
+mix-bls/deal-341/1024   time:   [1.9119 s 1.9305 s 1.9495 s]
+                        thrpt:  [525.27  elem/s 530.42  elem/s 535.58  elem/s]
+mix-bls/verify-341/1024 time:   [733.61 ms 733.94 ms 734.24 ms]
+                        thrpt:  [1.3946 Kelem/s 1.3952 Kelem/s 1.3958 Kelem/s]
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) low mild
+  1 (10.00%) high mild
+
+mix-ed/deal-21/64       time:   [97.697 ms 98.323 ms 98.862 ms]
+                        thrpt:  [647.37  elem/s 650.92  elem/s 655.08  elem/s]
+mix-ed/verify-21/64     time:   [57.528 ms 57.551 ms 57.571 ms]
+                        thrpt:  [1.1117 Kelem/s 1.1120 Kelem/s 1.1125 Kelem/s]
+mix-ed/deal-42/128      time:   [181.36 ms 182.38 ms 183.16 ms]
+                        thrpt:  [698.86  elem/s 701.84  elem/s 705.79  elem/s]
+mix-ed/verify-42/128    time:   [105.69 ms 105.71 ms 105.74 ms]
+                        thrpt:  [1.2105 Kelem/s 1.2108 Kelem/s 1.2111 Kelem/s]
+Found 3 outliers among 10 measurements (30.00%)
+  2 (20.00%) low severe
+  1 (10.00%) high severe
+mix-ed/deal-85/256      time:   [343.85 ms 346.67 ms 348.91 ms]
+                        thrpt:  [733.71  elem/s 738.45  elem/s 744.52  elem/s]
+mix-ed/verify-85/256    time:   [195.34 ms 195.40 ms 195.51 ms]
+                        thrpt:  [1.3094 Kelem/s 1.3101 Kelem/s 1.3105 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+mix-ed/deal-170/512     time:   [677.01 ms 682.09 ms 685.62 ms]
+                        thrpt:  [746.77  elem/s 750.63  elem/s 756.26  elem/s]
+mix-ed/verify-170/512   time:   [381.36 ms 381.50 ms 381.64 ms]
+                        thrpt:  [1.3416 Kelem/s 1.3421 Kelem/s 1.3426 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+mix-ed/deal-341/1024    time:   [1.3273 s 1.3347 s 1.3420 s]
+                        thrpt:  [763.05  elem/s 767.23  elem/s 771.47  elem/s]
+mix-ed/verify-341/1024  time:   [742.85 ms 743.13 ms 743.38 ms]
+                        thrpt:  [1.3775 Kelem/s 1.3780 Kelem/s 1.3785 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+
+yurek/deal-21/64        time:   [16.315 ms 16.319 ms 16.327 ms]
+                        thrpt:  [3.9198 Kelem/s 3.9218 Kelem/s 3.9228 Kelem/s]
+yurek/verify-21/64      time:   [967.63 µs 970.17 µs 974.42 µs]
+                        thrpt:  [65.680 Kelem/s 65.968 Kelem/s 66.141 Kelem/s]
+yurek/deal-42/128       time:   [32.549 ms 32.554 ms 32.562 ms]
+                        thrpt:  [3.9310 Kelem/s 3.9319 Kelem/s 3.9326 Kelem/s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+yurek/verify-42/128     time:   [1.7148 ms 1.7181 ms 1.7220 ms]
+                        thrpt:  [74.334 Kelem/s 74.502 Kelem/s 74.645 Kelem/s]
+yurek/deal-85/256       time:   [65.003 ms 65.038 ms 65.120 ms]
+                        thrpt:  [3.9312 Kelem/s 3.9361 Kelem/s 3.9383 Kelem/s]
+                 change:
+                        time:   [-0.0010% +0.0717% +0.1660%] (p = 0.15 > 0.05)
+                        thrpt:  [-0.1657% -0.0717% +0.0010%]
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high severe
+yurek/verify-85/256     time:   [3.2822 ms 3.2859 ms 3.2926 ms]
+                        thrpt:  [77.749 Kelem/s 77.908 Kelem/s 77.998 Kelem/s]
+                 change:
+                        time:   [-0.5095% -0.2523% +0.0016%] (p = 0.09 > 0.05)
+                        thrpt:  [-0.0016% +0.2530% +0.5121%]
+                        No change in performance detected.
+yurek/deal-170/512      time:   [129.76 ms 129.78 ms 129.79 ms]
+                        thrpt:  [3.9447 Kelem/s 3.9453 Kelem/s 3.9459 Kelem/s]
+                 change:
+                        time:   [-0.1367% -0.1176% -0.0994%] (p = 0.00 < 0.05)
+                        thrpt:  [+0.0995% +0.1177% +0.1368%]
+                        Change within noise threshold.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+yurek/verify-170/512    time:   [6.7591 ms 6.7625 ms 6.7669 ms]
+                        thrpt:  [75.662 Kelem/s 75.711 Kelem/s 75.749 Kelem/s]
+                 change:
+                        time:   [-0.4356% -0.3210% -0.1993%] (p = 0.00 < 0.05)
+                        thrpt:  [+0.1997% +0.3221% +0.4375%]
+                        Change within noise threshold.
+yurek/deal-341/1024     time:   [259.47 ms 259.50 ms 259.54 ms]
+                        thrpt:  [3.9455 Kelem/s 3.9460 Kelem/s 3.9466 Kelem/s]
+                 change:
+                        time:   [-0.1712% -0.1569% -0.1425%] (p = 0.00 < 0.05)
+                        thrpt:  [+0.1427% +0.1572% +0.1715%]
+                        Change within noise threshold.
+yurek/verify-341/1024   time:   [14.398 ms 14.434 ms 14.492 ms]
+                        thrpt:  [70.660 Kelem/s 70.944 Kelem/s 71.119 Kelem/s]
+                 change:
+                        time:   [-2.4788% -1.4242% -0.5090%] (p = 0.01 < 0.05)
+                        thrpt:  [+0.5116% +1.4448% +2.5418%]
+                        Change within noise threshold.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+

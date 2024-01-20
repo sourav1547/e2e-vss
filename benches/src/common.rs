@@ -5,6 +5,7 @@ pub fn common_group(c: &mut Criterion) {
     let mut group = c.benchmark_group("common");
     
     let ts = [21, 42, 85, 170, 341];
+    // let ts = [42, 84, 170, 340, 682];
     let ns = [64, 128, 256, 512, 1024];
 
     for (&t, &n) in ts.iter().zip(ns.iter()) {
