@@ -4,8 +4,8 @@ use criterion::{BenchmarkGroup, BenchmarkId, Criterion, criterion_group, criteri
 pub fn common_group(c: &mut Criterion) {
     let mut group = c.benchmark_group("common");
     
-    let ts = [85, 170, 341];
-    let ns= [256, 512, 1024];
+    let ts = [21, 42, 85, 170, 341];
+    let ns = [64, 128, 256, 512, 1024];
 
     for (&t, &n) in ts.iter().zip(ns.iter()) {
         common::vss_recon(t, n, &mut group);

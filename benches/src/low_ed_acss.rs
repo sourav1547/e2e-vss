@@ -4,12 +4,12 @@ use criterion::{BenchmarkGroup, BenchmarkId, Criterion, measurement::Measurement
 pub fn vss_low_ed_group(c: &mut Criterion) {
     let mut group = c.benchmark_group("low-ed");
 
-    let ts = [85, 170, 341];
-    let ns= [256, 512, 1024];
+    let ts = [21, 42, 85, 170, 341];
+    let ns = [64, 128, 256, 512, 1024];
 
     for (&t, &n) in ts.iter().zip(ns.iter()) {
         low_ed_acss::vss_deal(t, n, &mut group);
-        // low_ed_acss::vss_verify(t, n, &mut group);
+        low_ed_acss::vss_verify(t, n, &mut group);
     }
 
     group.finish();
