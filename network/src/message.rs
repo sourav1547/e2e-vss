@@ -65,6 +65,10 @@ impl<S> Message<S>
         let content = bincode::deserialize::<T>(&self.content)?;
         Ok(content)
     }
+
+    pub fn get_size(&self) -> usize {
+        self.content.len()
+    }
 }
 
 /// Returns the type id of given type [T].

@@ -34,6 +34,8 @@ pub(super) struct Cache<T> {
     receivers: mpsc::Receiver<Message<T>>,
     subscribers: HashMap<CacheKey, mpsc::Sender<Message<T>>>,
     ignore: HashSet<CacheKey>,
+    recv_bytes: usize,
+    recv_count: usize,
 }
 
 impl<T> Cache<T>
@@ -42,7 +44,7 @@ impl<T> Cache<T>
 {
     /// Creates a new [Cache].
     pub(super) fn new(manager: mpsc::Receiver<CacheMsg<T>>, receivers: mpsc::Receiver<Message<T>>) -> Self {
-        Self { manager, receivers, round: 0, subscribers: HashMap::new(), cache: HashMap::new(), ignore: HashSet::new() }
+        Self { manager, receivers, round: 0, subscribers: HashMap::new(), cache: HashMap::new(), ignore: HashSet::new(), recv_bytes: 0, recv_count: 0 }
     }
 
     pub(super) async fn run(&mut self) {
@@ -56,11 +58,16 @@ impl<T> Cache<T>
                         // down the listener (and thus all receivers) before shutting down the cache.
                         close_and_drain!(self.receivers);
                         log::debug!("Shut down.");
+                        println!("Cache received {} messages with a total size of {} bytes.", self.recv_count, self.recv_bytes);
                         shutdown_done!(tx);
                     },
                     msg => self.handle_cache_msg(msg).await,
                 },
-                Some(msg) = self.receivers.recv() => self.handle_msg(msg).await,
+                Some(msg) = self.receivers.recv() => {
+                    self.recv_bytes += msg.get_size();
+                    self.recv_count += 1;
+                    self.handle_msg(msg).await;
+                },
             }
         }
     }
