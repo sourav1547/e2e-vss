@@ -1,0 +1,1218 @@
+Script started on 2024-01-21 02:11:11+00:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="156" LINES="40"]
+Experiment 0...
+cli run -c node.cfg -s partial -a 'yurek' -d '42' -p '1024' -w '0'
+
+Latency:                 649                 
+Dealer BW (KBytes):      1810.0              Dealer Msg Count:   128.07
+Rcv BW (KBytes):         33.37               Rcv Msg Count:      512.93
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 1...
+cli run -c node.cfg -s partial -a 'yurek' -d '42' -p '1025' -w '0'
+
+Latency:                 650                 
+Dealer BW (KBytes):      1810.0              Dealer Msg Count:   128.02
+Rcv BW (KBytes):         33.38               Rcv Msg Count:      512.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 2...
+cli run -c node.cfg -s partial -a 'yurek' -d '42' -p '1026' -w '0'
+
+Latency:                 661                 
+Dealer BW (KBytes):      1810.0              Dealer Msg Count:   128.03
+Rcv BW (KBytes):         33.31               Rcv Msg Count:      510.97
+Number of timeouts: 2
+--------------------------------------------------
+Experiment 3...
+cli run -c node.cfg -s partial -a 'yurek' -d '42' -p '1027' -w '0'
+
+Latency:                 657                 
+Dealer BW (KBytes):      1810.0              Dealer Msg Count:   128
+Rcv BW (KBytes):         33.38               Rcv Msg Count:      513
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 4...
+cli run -c node.cfg -s partial -a 'yurek' -d '42' -p '1028' -w '0'
+
+Latency:                 657                 
+Dealer BW (KBytes):      1810.0              Dealer Msg Count:   128.08
+Rcv BW (KBytes):         33.37               Rcv Msg Count:      512.92
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 5...
+cli run -c node.cfg -s partial -a 'yurek' -d '42' -p '1029' -w '0'
+
+Latency:                 654                 
+Dealer BW (KBytes):      1810.0              Dealer Msg Count:   128
+Rcv BW (KBytes):         33.31               Rcv Msg Count:      511
+Number of timeouts: 2
+--------------------------------------------------
+Experiment 6...
+cli run -c node.cfg -s partial -a 'yurek' -d '42' -p '1030' -w '0'
+
+Latency:                 660                 
+Dealer BW (KBytes):      1810.0              Dealer Msg Count:   128
+Rcv BW (KBytes):         33.38               Rcv Msg Count:      513
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 7...
+cli run -c node.cfg -s partial -a 'yurek' -d '42' -p '1031' -w '0'
+
+Latency:                 647                 
+Dealer BW (KBytes):      1810.0              Dealer Msg Count:   128.09
+Rcv BW (KBytes):         33.37               Rcv Msg Count:      512.91
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 8...
+cli run -c node.cfg -s partial -a 'yurek' -d '42' -p '1032' -w '0'
+
+Latency:                 665                 
+Dealer BW (KBytes):      1810.0              Dealer Msg Count:   128.02
+Rcv BW (KBytes):         33.31               Rcv Msg Count:      510.98
+Number of timeouts: 2
+--------------------------------------------------
+Experiment 9...
+cli run -c node.cfg -s partial -a 'yurek' -d '42' -p '1033' -w '0'
+
+Latency:                 646                 
+Dealer BW (KBytes):      1810.0              Dealer Msg Count:   128
+Rcv BW (KBytes):         33.34               Rcv Msg Count:      512
+Number of timeouts: 1
+--------------------------------------------------
+------------- Avergage of Average -------------
+Latency:                 654.6               
+Dealer BW (KBytes):      1810.0              Dealer Msg Count:   128.03
+Rcv BW (KBytes):         33.35               Rcv Msg Count:      512.27
+
+Script done on 2024-01-21 02:16:00+00:00 [COMMAND_EXIT_CODE="0"]
+Script started on 2024-01-21 02:21:23+00:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="156" LINES="40"]
+Experiment 0...
+cli run -c node.cfg -s partial -a 'groth' -d '42' -p '1024' -w '0'
+
+Latency:                 4038                
+Dealer BW (KBytes):      15780.25            Dealer Msg Count:   128.02
+Rcv BW (KBytes):         142.52              Rcv Msg Count:      512.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 1...
+cli run -c node.cfg -s partial -a 'groth' -d '42' -p '1025' -w '0'
+
+Latency:                 4035                
+Dealer BW (KBytes):      15780.25            Dealer Msg Count:   128
+Rcv BW (KBytes):         142.52              Rcv Msg Count:      513
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 2...
+cli run -c node.cfg -s partial -a 'groth' -d '42' -p '1026' -w '0'
+
+Latency:                 4076                
+Dealer BW (KBytes):      15780.25            Dealer Msg Count:   128
+Rcv BW (KBytes):         142.52              Rcv Msg Count:      513
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 3...
+cli run -c node.cfg -s partial -a 'groth' -d '42' -p '1027' -w '0'
+
+Latency:                 4028                
+Dealer BW (KBytes):      15780.25            Dealer Msg Count:   128
+Rcv BW (KBytes):         142.52              Rcv Msg Count:      513
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 4...
+cli run -c node.cfg -s partial -a 'groth' -d '42' -p '1028' -w '0'
+
+Latency:                 4035                
+Dealer BW (KBytes):      15780.25            Dealer Msg Count:   128
+Rcv BW (KBytes):         142.52              Rcv Msg Count:      513
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 5...
+cli run -c node.cfg -s partial -a 'groth' -d '42' -p '1029' -w '0'
+
+Latency:                 4037                
+Dealer BW (KBytes):      15780.25            Dealer Msg Count:   128
+Rcv BW (KBytes):         142.52              Rcv Msg Count:      513
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 6...
+cli run -c node.cfg -s partial -a 'groth' -d '42' -p '1030' -w '0'
+
+Latency:                 4049                
+Dealer BW (KBytes):      15780.25            Dealer Msg Count:   128
+Rcv BW (KBytes):         142.52              Rcv Msg Count:      513
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 7...
+cli run -c node.cfg -s partial -a 'groth' -d '42' -p '1031' -w '0'
+
+Latency:                 4059                
+Dealer BW (KBytes):      15780.25            Dealer Msg Count:   128
+Rcv BW (KBytes):         142.52              Rcv Msg Count:      513
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 8...
+cli run -c node.cfg -s partial -a 'groth' -d '42' -p '1032' -w '0'
+
+Latency:                 4029                
+Dealer BW (KBytes):      15780.25            Dealer Msg Count:   128
+Rcv BW (KBytes):         142.52              Rcv Msg Count:      513
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 9...
+cli run -c node.cfg -s partial -a 'groth' -d '42' -p '1033' -w '0'
+
+Latency:                 4041                
+Dealer BW (KBytes):      15780.25            Dealer Msg Count:   128
+Rcv BW (KBytes):         142.52              Rcv Msg Count:      513
+Number of timeouts: 0
+--------------------------------------------------
+------------- Avergage of Average -------------
+Latency:                 4042.7              
+Dealer BW (KBytes):      15780.25            Dealer Msg Count:   128.0
+Rcv BW (KBytes):         142.52              Rcv Msg Count:      513.0
+
+Script done on 2024-01-21 02:27:10+00:00 [COMMAND_EXIT_CODE="0"]
+Script started on 2024-01-21 02:28:51+00:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="156" LINES="40"]
+Experiment 0...
+cli run -c node.cfg -s partial -a 'low-ed' -d '42' -p '1024' -w '0'
+15780.25
+Latency:                 623                 
+Dealer BW (KBytes):      1852.25             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         33.7                Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 1...
+cli run -c node.cfg -s partial -a 'low-ed' -d '42' -p '1025' -w '0'
+
+Latency:                 623                 
+Dealer BW (KBytes):      1852.25             Dealer Msg Count:   384.09
+Rcv BW (KBytes):         33.7                Rcv Msg Count:      514.91
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 2...
+cli run -c node.cfg -s partial -a 'low-ed' -d '42' -p '1026' -w '0'
+
+Latency:                 623                 
+Dealer BW (KBytes):      1852.25             Dealer Msg Count:   384.05
+Rcv BW (KBytes):         33.61               Rcv Msg Count:      511.95
+Number of timeouts: 3
+--------------------------------------------------
+Experiment 3...
+cli run -c node.cfg -s partial -a 'low-ed' -d '42' -p '1027' -w '0'
+
+Latency:                 623                 
+Dealer BW (KBytes):      1852.18             Dealer Msg Count:   383.03
+Rcv BW (KBytes):         33.61               Rcv Msg Count:      511.97
+Number of timeouts: 3
+--------------------------------------------------
+Experiment 4...
+cli run -c node.cfg -s partial -a 'low-ed' -d '42' -p '1028' -w '0'
+
+Latency:                 623                 
+Dealer BW (KBytes):      1852.25             Dealer Msg Count:   384.06
+Rcv BW (KBytes):         33.61               Rcv Msg Count:      511.94
+Number of timeouts: 3
+--------------------------------------------------
+Experiment 5...
+cli run -c node.cfg -s partial -a 'low-ed' -d '42' -p '1029' -w '0'
+1852.25
+Latency:                 623                 
+Dealer BW (KBytes):      1852.25             Dealer Msg Count:   384.12
+Rcv BW (KBytes):         33.61               Rcv Msg Count:      511.88
+Number of timeouts: 3
+--------------------------------------------------
+Experiment 6...
+cli run -c node.cfg -s partial -a 'low-ed' -d '42' -p '1030' -w '0'
+
+Latency:                 623                 
+Dealer BW (KBytes):      1852.25             Dealer Msg Count:   384.07
+Rcv BW (KBytes):         33.58               Rcv Msg Count:      510.93
+Number of timeouts: 4
+--------------------------------------------------
+Experiment 7...
+cli run -c node.cfg -s partial -a 'low-ed' -d '42' -p '1031' -w '0'
+
+Latency:                 623                 
+Dealer BW (KBytes):      1852.25             Dealer Msg Count:   384.03
+Rcv BW (KBytes):         33.7                Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 8...
+cli run -c node.cfg -s partial -a 'low-ed' -d '42' -p '1032' -w '0'
+
+Latency:                 623                 
+Dealer BW (KBytes):      1852.25             Dealer Msg Count:   384.05
+Rcv BW (KBytes):         33.7                Rcv Msg Count:      514.95
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 9...
+cli run -c node.cfg -s partial -a 'low-ed' -d '42' -p '1033' -w '0'
+
+Latency:                 623                 
+Dealer BW (KBytes):      1852.25             Dealer Msg Count:   384.1
+Rcv BW (KBytes):         33.67               Rcv Msg Count:      513.9
+Number of timeouts: 1
+--------------------------------------------------
+------------- Avergage of Average -------------
+Latency:                 623                 
+Dealer BW (KBytes):      1852.24             Dealer Msg Count:   383.96
+Rcv BW (KBytes):         33.65               Rcv Msg Count:      513.24
+
+Script done on 2024-01-21 02:34:50+00:00 [COMMAND_EXIT_CODE="0"]
+Script started on 2024-01-21 02:37:18+00:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="125" LINES="40"]
+Experiment 0...
+cli run -c node.cfg -s partial -a 'low-bls' -d '42' -p '1024' -w '0'
+
+Latency:                 632                 
+Dealer BW (KBytes):      1492.25             Dealer Msg Count:   384.07
+Rcv BW (KBytes):         30.89               Rcv Msg Count:      514.93
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 1...
+cli run -c node.cfg -s partial -a 'low-bls' -d '42' -p '1025' -w '0'
+
+Latency:                 632                 
+Dealer BW (KBytes):      1492.25             Dealer Msg Count:   384.1
+Rcv BW (KBytes):         30.86               Rcv Msg Count:      513.9
+Number of timeouts: 1
+--------------------------------------------------
+Experiment 2...
+cli run -c node.cfg -s partial -a 'low-bls' -d '42' -p '1026' -w '0'
+
+Latency:                 631                 
+Dealer BW (KBytes):      1492.25             Dealer Msg Count:   384.03
+Rcv BW (KBytes):         30.8                Rcv Msg Count:      511.97
+Number of timeouts: 3
+--------------------------------------------------
+Experiment 3...
+cli run -c node.cfg -s partial -a 'low-bls' -d '42' -p '1027' -w '0'
+
+Latency:                 632                 
+Dealer BW (KBytes):      1492.25             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         30.86               Rcv Msg Count:      513.98
+Number of timeouts: 1
+--------------------------------------------------
+Experiment 4...
+cli run -c node.cfg -s partial -a 'low-bls' -d '42' -p '1028' -w '0'
+
+Latency:                 631                 
+Dealer BW (KBytes):      1492.25             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         30.83               Rcv Msg Count:      512.98
+Number of timeouts: 2
+--------------------------------------------------
+Experiment 5...
+cli run -c node.cfg -s partial -a 'low-bls' -d '42' -p '1029' -w '0'
+
+Latency:                 632                 
+Dealer BW (KBytes):      1492.25             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         30.89               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 6...
+cli run -c node.cfg -s partial -a 'low-bls' -d '42' -p '1030' -w '0'
+
+Latency:                 633                 
+Dealer BW (KBytes):      1492.25             Dealer Msg Count:   384.03
+Rcv BW (KBytes):         30.86               Rcv Msg Count:      513.97
+Number of timeouts: 1
+--------------------------------------------------
+Experiment 7...
+cli run -c node.cfg -s partial -a 'low-bls' -d '42' -p '1031' -w '0'
+
+Latency:                 632                 
+Dealer BW (KBytes):      1492.25             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         30.86               Rcv Msg Count:      513.98
+Number of timeouts: 1
+--------------------------------------------------
+Experiment 8...
+cli run -c node.cfg -s partial -a 'low-bls' -d '42' -p '1032' -w '0'
+
+Latency:                 632                 
+Dealer BW (KBytes):      1492.25             Dealer Msg Count:   384.05
+Rcv BW (KBytes):         30.83               Rcv Msg Count:      512.95
+Number of timeouts: 2
+--------------------------------------------------
+Experiment 9...
+cli run -c node.cfg -s partial -a 'low-bls' -d '42' -p '1033' -w '0'
+
+Latency:                 633                 
+Dealer BW (KBytes):      1492.25             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         30.86               Rcv Msg Count:      513.98
+Number of timeouts: 1
+--------------------------------------------------
+------------- Avergage of Average -------------
+Latency:                 632                 
+Dealer BW (KBytes):      1492.25             Dealer Msg Count:   384.04
+Rcv BW (KBytes):         30.85               Rcv Msg Count:      513.76
+
+Script done on 2024-01-21 02:43:40+00:00 [COMMAND_EXIT_CODE="0"]
+Script started on 2024-01-21 02:43:40+00:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="125" LINES="48"]
+Experiment 0...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1024' -w '0'
+
+Latency:                 1960                
+Dealer BW (KBytes):      6893.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         73.09               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 1...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1025' -w '0'
+
+Latency:                 1960                
+Dealer BW (KBytes):      6893.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         73.09               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 2...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1026' -w '0'
+
+Latency:                 1960                
+Dealer BW (KBytes):      6893.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         73.09               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 3...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1027' -w '0'
+
+Latency:                 1960                
+Dealer BW (KBytes):      6893.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         73.09               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 4...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1028' -w '0'
+
+Latency:                 1960                
+Dealer BW (KBytes):      6893.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         73.09               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 5...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1029' -w '0'
+
+Latency:                 1971                
+Dealer BW (KBytes):      6893.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         73.09               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 6...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1030' -w '0'
+
+Latency:                 1960                
+Dealer BW (KBytes):      6893.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         73.09               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 7...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1031' -w '0'
+
+Latency:                 1960                
+Dealer BW (KBytes):      6893.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         73.09               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 8...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1032' -w '0'
+
+Latency:                 1969                
+Dealer BW (KBytes):      6893.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         73.09               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 9...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1033' -w '0'
+
+Latency:                 1960                
+Dealer BW (KBytes):      6893.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         73.09               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+------------- Avergage of Average -------------
+Latency:                 1962                
+Dealer BW (KBytes):      6893.38             Dealer Msg Count:   384.01
+Rcv BW (KBytes):         73.09               Rcv Msg Count:      514.99
+
+Script done on 2024-01-21 02:48:31+00:00 [COMMAND_EXIT_CODE="0"]
+Script started on 2024-01-21 02:48:31+00:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="125" LINES="48"]
+Experiment 0...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1024' -w '0'
+
+Latency:                 1889                
+Dealer BW (KBytes):      6189.38             Dealer Msg Count:   384.03
+Rcv BW (KBytes):         67.59               Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 1...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1025' -w '0'
+
+Latency:                 1899                
+Dealer BW (KBytes):      6189.38             Dealer Msg Count:   384.05
+Rcv BW (KBytes):         67.56               Rcv Msg Count:      513.95
+Number of timeouts: 1
+--------------------------------------------------
+Experiment 2...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1026' -w '0'
+
+Latency:                 1900                
+Dealer BW (KBytes):      6189.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         67.59               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 3...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1027' -w '0'
+
+Latency:                 1890                
+Dealer BW (KBytes):      6189.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         67.59               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 4...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1028' -w '0'
+
+Latency:                 1910                
+Dealer BW (KBytes):      6189.38             Dealer Msg Count:   384.03
+Rcv BW (KBytes):         67.59               Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 5...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1029' -w '0'
+
+Latency:                 1910                
+Dealer BW (KBytes):      6189.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         67.59               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 6...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1030' -w '0'
+
+Latency:                 1901                
+Dealer BW (KBytes):      6189.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         67.59               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 7...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1031' -w '0'
+
+Latency:                 1890                
+Dealer BW (KBytes):      6189.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         67.59               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 8...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1032' -w '0'
+
+Latency:                 1889                
+Dealer BW (KBytes):      6189.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         67.59               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 9...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1033' -w '0'
+
+Latency:                 1900                
+Dealer BW (KBytes):      6189.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         67.56               Rcv Msg Count:      513.98
+Number of timeouts: 1
+--------------------------------------------------
+------------- Avergage of Average -------------
+Latency:                 1897.8              
+Dealer BW (KBytes):      6189.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         67.58               Rcv Msg Count:      514.78
+
+Script done on 2024-01-21 02:53:44+00:00 [COMMAND_EXIT_CODE="0"]
+Script started on 2024-01-21 02:58:21+00:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="125" LINES="48"]
+Experiment 0...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1024' -w '250'
+
+Latency:                 1228                
+Dealer BW (KBytes):      3773.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         48.71               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 1...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1025' -w '250'
+
+Latency:                 1214                
+Dealer BW (KBytes):      3669.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         47.9                Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 2...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1026' -w '250'
+
+Latency:                 1281                
+Dealer BW (KBytes):      3981.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         50.27               Rcv Msg Count:      512.98
+Number of timeouts: 2
+--------------------------------------------------
+Experiment 3...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1027' -w '250'
+
+Latency:                 1170                
+Dealer BW (KBytes):      3461.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         46.28               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 4...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1028' -w '250'
+
+Latency:                 1147                
+Dealer BW (KBytes):      3357.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         45.46               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 5...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1029' -w '250'
+
+Latency:                 1260                
+Dealer BW (KBytes):      3877.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         49.53               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 6...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1030' -w '250'
+
+Latency:                 1182                
+Dealer BW (KBytes):      3565.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         47.09               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 7...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1031' -w '250'
+
+Latency:                 1250                
+Dealer BW (KBytes):      3877.38             Dealer Msg Count:   384.03
+Rcv BW (KBytes):         49.52               Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 8...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1032' -w '250'
+
+Latency:                 1214                
+Dealer BW (KBytes):      3669.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         47.9                Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 9...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1033' -w '250'
+
+Latency:                 1294                
+Dealer BW (KBytes):      4085.38             Dealer Msg Count:   384.03
+Rcv BW (KBytes):         51.15               Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+------------- Avergage of Average -------------
+Latency:                 1224                
+Dealer BW (KBytes):      3731.78             Dealer Msg Count:   384.01
+Rcv BW (KBytes):         48.38               Rcv Msg Count:      514.79
+
+Script done on 2024-01-21 03:03:23+00:00 [COMMAND_EXIT_CODE="0"]
+Script started on 2024-01-21 03:03:23+00:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="125" LINES="48"]
+Experiment 0...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1024' -w '275'
+
+Latency:                 954                 
+Dealer BW (KBytes):      1850.38             Dealer Msg Count:   384.03
+Rcv BW (KBytes):         33.69               Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 1...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1025' -w '275'
+
+Latency:                 1179                
+Dealer BW (KBytes):      2837.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         41.34               Rcv Msg Count:      513
+Number of timeouts: 2
+--------------------------------------------------
+Experiment 2...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1026' -w '275'
+
+Latency:                 744                 
+Dealer BW (KBytes):      1850.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         33.69               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 3...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1027' -w '275'
+
+Latency:                 1303                
+Dealer BW (KBytes):      2629.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         39.74               Rcv Msg Count:      513.98
+Number of timeouts: 1
+--------------------------------------------------
+Experiment 4...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1028' -w '275'
+
+Latency:                 1294                
+Dealer BW (KBytes):      2629.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         39.78               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 5...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1029' -w '275'
+
+Latency:                 743                 
+Dealer BW (KBytes):      1850.38             Dealer Msg Count:   384.05
+Rcv BW (KBytes):         33.69               Rcv Msg Count:      514.95
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 6...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1030' -w '275'
+
+Latency:                 744                 
+Dealer BW (KBytes):      1850.38             Dealer Msg Count:   384.03
+Rcv BW (KBytes):         33.69               Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 7...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1031' -w '275'
+
+Latency:                 1293                
+Dealer BW (KBytes):      2629.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         39.74               Rcv Msg Count:      514
+Number of timeouts: 1
+--------------------------------------------------
+Experiment 8...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1032' -w '275'
+
+Latency:                 744                 
+Dealer BW (KBytes):      1850.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         33.69               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 9...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1033' -w '275'
+
+Latency:                 1074                
+Dealer BW (KBytes):      2629.38             Dealer Msg Count:   384.01
+Rcv BW (KBytes):         39.74               Rcv Msg Count:      513.99
+Number of timeouts: 1
+--------------------------------------------------
+------------- Avergage of Average -------------
+Latency:                 1007.2              
+Dealer BW (KBytes):      2260.68             Dealer Msg Count:   384.01
+Rcv BW (KBytes):         36.88               Rcv Msg Count:      514.49
+
+Script done on 2024-01-21 03:08:58+00:00 [COMMAND_EXIT_CODE="0"]
+Script started on 2024-01-21 03:08:58+00:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="125" LINES="48"]
+Experiment 0...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1024' -w '300'
+
+Latency:                 744                 
+Dealer BW (KBytes):      1850.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         33.69               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 1...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1025' -w '300'
+
+Latency:                 1284                
+Dealer BW (KBytes):      3149.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         43.81               Rcv Msg Count:      513.98
+Number of timeouts: 1
+--------------------------------------------------
+Experiment 2...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1026' -w '300'
+
+Latency:                 1348                
+Dealer BW (KBytes):      2837.31             Dealer Msg Count:   383.02
+Rcv BW (KBytes):         41.34               Rcv Msg Count:      512.98
+Number of timeouts: 2
+--------------------------------------------------
+Experiment 3...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1027' -w '300'
+
+Latency:                 743                 
+Dealer BW (KBytes):      1850.38             Dealer Msg Count:   384.08
+Rcv BW (KBytes):         33.69               Rcv Msg Count:      514.92
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 4...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1028' -w '300'
+
+Latency:                 734                 
+Dealer BW (KBytes):      1850.38             Dealer Msg Count:   384.05
+Rcv BW (KBytes):         33.69               Rcv Msg Count:      514.95
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 5...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1029' -w '300'
+
+Latency:                 1324                
+Dealer BW (KBytes):      2629.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         39.78               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 6...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1030' -w '300'
+
+Latency:                 745                 
+Dealer BW (KBytes):      1850.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         33.69               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 7...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1031' -w '300'
+
+Latency:                 1296                
+Dealer BW (KBytes):      2733.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         40.59               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 8...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1032' -w '300'
+
+Latency:                 734                 
+Dealer BW (KBytes):      1850.38             Dealer Msg Count:   384.08
+Rcv BW (KBytes):         33.69               Rcv Msg Count:      514.92
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 9...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1033' -w '300'
+
+Latency:                 1323                
+Dealer BW (KBytes):      2629.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         39.74               Rcv Msg Count:      513.98
+Number of timeouts: 1
+--------------------------------------------------
+------------- Avergage of Average -------------
+Latency:                 1027.5              
+Dealer BW (KBytes):      2323.07             Dealer Msg Count:   383.93
+Rcv BW (KBytes):         37.37               Rcv Msg Count:      514.57
+
+Script done on 2024-01-21 03:14:23+00:00 [COMMAND_EXIT_CODE="0"]
+Script started on 2024-01-21 03:14:23+00:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="125" LINES="48"]
+Experiment 0...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1024' -w '250'
+
+Latency:                 1352                
+Dealer BW (KBytes):      3613.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         47.46               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 1...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1025' -w '250'
+
+Latency:                 1405                
+Dealer BW (KBytes):      3837.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         49.15               Rcv Msg Count:      513
+Number of timeouts: 2
+--------------------------------------------------
+Experiment 2...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1026' -w '250'
+
+Latency:                 1304                
+Dealer BW (KBytes):      3277.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         44.84               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 3...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1027' -w '250'
+
+Latency:                 1339                
+Dealer BW (KBytes):      3501.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         46.59               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 4...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1028' -w '250'
+
+Latency:                 1295                
+Dealer BW (KBytes):      3277.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         44.84               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 5...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1029' -w '250'
+
+Latency:                 1270                
+Dealer BW (KBytes):      3053.38             Dealer Msg Count:   384.03
+Rcv BW (KBytes):         43.09               Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 6...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1030' -w '250'
+
+Latency:                 1250                
+Dealer BW (KBytes):      3053.38             Dealer Msg Count:   384.01
+Rcv BW (KBytes):         43.09               Rcv Msg Count:      514.99
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 7...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1031' -w '250'
+
+Latency:                 1283                
+Dealer BW (KBytes):      3165.38             Dealer Msg Count:   384.03
+Rcv BW (KBytes):         43.93               Rcv Msg Count:      513.97
+Number of timeouts: 1
+--------------------------------------------------
+Experiment 8...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1032' -w '250'
+
+Latency:                 1292                
+Dealer BW (KBytes):      3165.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         43.96               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 9...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1033' -w '250'
+
+Latency:                 1304                
+Dealer BW (KBytes):      3277.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         44.84               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+------------- Avergage of Average -------------
+Latency:                 1309.4              
+Dealer BW (KBytes):      3322.18             Dealer Msg Count:   384.01
+Rcv BW (KBytes):         45.18               Rcv Msg Count:      514.69
+
+Script done on 2024-01-21 03:19:49+00:00 [COMMAND_EXIT_CODE="0"]
+Script started on 2024-01-21 03:19:49+00:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="125" LINES="48"]
+Experiment 0...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1024' -w '275'
+
+Latency:                 742                 
+Dealer BW (KBytes):      810.12              Dealer Msg Count:   384
+Rcv BW (KBytes):         25.56               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 1...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1025' -w '275'
+
+Latency:                 1003                
+Dealer BW (KBytes):      810.13              Dealer Msg Count:   384.02
+Rcv BW (KBytes):         25.56               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 2...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1026' -w '275'
+
+Latency:                 1212                
+Dealer BW (KBytes):      1597.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         31.71               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 3...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1027' -w '275'
+
+Latency:                 1024                
+Dealer BW (KBytes):      1709.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         32.56               Rcv Msg Count:      513.98
+Number of timeouts: 1
+--------------------------------------------------
+Experiment 4...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1028' -w '275'
+
+Latency:                 843                 
+Dealer BW (KBytes):      810.13              Dealer Msg Count:   384.04
+Rcv BW (KBytes):         25.56               Rcv Msg Count:      514.96
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 5...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1029' -w '275'
+
+Latency:                 802                 
+Dealer BW (KBytes):      810.12              Dealer Msg Count:   384
+Rcv BW (KBytes):         25.56               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 6...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1030' -w '275'
+
+Latency:                 742                 
+Dealer BW (KBytes):      810.13              Dealer Msg Count:   384.03
+Rcv BW (KBytes):         25.56               Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 7...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1031' -w '275'
+
+Latency:                 1181                
+Dealer BW (KBytes):      1597.38             Dealer Msg Count:   384.01
+Rcv BW (KBytes):         31.71               Rcv Msg Count:      514.99
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 8...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1032' -w '275'
+
+Latency:                 902                 
+Dealer BW (KBytes):      810.13              Dealer Msg Count:   384.02
+Rcv BW (KBytes):         25.56               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 9...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1033' -w '275'
+
+Latency:                 752                 
+Dealer BW (KBytes):      810.13              Dealer Msg Count:   384.03
+Rcv BW (KBytes):         25.56               Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+------------- Avergage of Average -------------
+Latency:                 920.3               
+Dealer BW (KBytes):      1057.5              Dealer Msg Count:   384.02
+Rcv BW (KBytes):         27.49               Rcv Msg Count:      514.88
+
+Script done on 2024-01-21 03:24:49+00:00 [COMMAND_EXIT_CODE="0"]
+Script started on 2024-01-21 03:24:49+00:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="125" LINES="48"]
+Experiment 0...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1024' -w '300'
+
+Latency:                 1234                
+Dealer BW (KBytes):      1709.27             Dealer Msg Count:   383
+Rcv BW (KBytes):         32.53               Rcv Msg Count:      513
+Number of timeouts: 1
+--------------------------------------------------
+Experiment 1...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1025' -w '300'
+
+Latency:                 872                 
+Dealer BW (KBytes):      810.13              Dealer Msg Count:   384.03
+Rcv BW (KBytes):         25.56               Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 2...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1026' -w '300'
+
+Latency:                 1241                
+Dealer BW (KBytes):      1597.38             Dealer Msg Count:   384.03
+Rcv BW (KBytes):         31.71               Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 3...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1027' -w '300'
+
+Latency:                 882                 
+Dealer BW (KBytes):      810.12              Dealer Msg Count:   384
+Rcv BW (KBytes):         25.56               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 4...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1028' -w '300'
+
+Latency:                 792                 
+Dealer BW (KBytes):      810.13              Dealer Msg Count:   384.03
+Rcv BW (KBytes):         25.56               Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 5...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1029' -w '300'
+
+Latency:                 742                 
+Dealer BW (KBytes):      810.13              Dealer Msg Count:   384.03
+Rcv BW (KBytes):         25.56               Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 6...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1030' -w '300'
+
+Latency:                 1232                
+Dealer BW (KBytes):      1597.38             Dealer Msg Count:   384.05
+Rcv BW (KBytes):         31.71               Rcv Msg Count:      514.95
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 7...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1031' -w '300'
+
+Latency:                 1032                
+Dealer BW (KBytes):      810.13              Dealer Msg Count:   384.02
+Rcv BW (KBytes):         25.56               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 8...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1032' -w '300'
+
+Latency:                 802                 
+Dealer BW (KBytes):      810.13              Dealer Msg Count:   384.03
+Rcv BW (KBytes):         25.56               Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 9...
+cli run -c node.cfg -s partial -a 'mix-bls' -d '84' -p '1033' -w '300'
+
+Latency:                 743                 
+Dealer BW (KBytes):      810.12              Dealer Msg Count:   384
+Rcv BW (KBytes):         25.56               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+------------- Avergage of Average -------------
+Latency:                 957.2               
+Dealer BW (KBytes):      1057.49             Dealer Msg Count:   383.92
+Rcv BW (KBytes):         27.49               Rcv Msg Count:      514.78
+
+Script done on 2024-01-21 03:33:33+00:00 [COMMAND_EXIT_CODE="0"]
+Script started on 2024-01-21 03:35:35+00:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="125" LINES="48"]
+Experiment 0...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1024' -w '274'
+
+Latency:                 744                 
+Dealer BW (KBytes):      1850.38             Dealer Msg Count:   384.03
+Rcv BW (KBytes):         33.69               Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 1...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1025' -w '274'
+
+Latency:                 1153                
+Dealer BW (KBytes):      2629.38             Dealer Msg Count:   384.03
+Rcv BW (KBytes):         39.74               Rcv Msg Count:      513.97
+Number of timeouts: 1
+--------------------------------------------------
+Experiment 2...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1026' -w '274'
+
+Latency:                 1294                
+Dealer BW (KBytes):      2629.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         39.77               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 3...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1027' -w '274'
+
+Latency:                 1148                
+Dealer BW (KBytes):      2837.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         41.4                Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 4...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1028' -w '274'
+
+Latency:                 1063                
+Dealer BW (KBytes):      2629.38             Dealer Msg Count:   384.03
+Rcv BW (KBytes):         39.77               Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 5...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1029' -w '274'
+
+Latency:                 1253                
+Dealer BW (KBytes):      2629.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         39.77               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 6...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1030' -w '274'
+
+Latency:                 1128                
+Dealer BW (KBytes):      2837.38             Dealer Msg Count:   384.05
+Rcv BW (KBytes):         41.34               Rcv Msg Count:      512.95
+Number of timeouts: 2
+--------------------------------------------------
+Experiment 7...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1031' -w '274'
+
+Latency:                 1348                
+Dealer BW (KBytes):      2837.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         41.37               Rcv Msg Count:      514
+Number of timeouts: 1
+--------------------------------------------------
+Experiment 8...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1032' -w '274'
+
+Latency:                 1244                
+Dealer BW (KBytes):      2629.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         39.78               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 9...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1033' -w '274'
+
+Latency:                 1304                
+Dealer BW (KBytes):      2629.38             Dealer Msg Count:   384.04
+Rcv BW (KBytes):         39.77               Rcv Msg Count:      514.96
+Number of timeouts: 0
+--------------------------------------------------
+------------- Avergage of Average -------------
+Latency:                 1167.9              
+Dealer BW (KBytes):      2613.88             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         39.64               Rcv Msg Count:      514.58
+
+Script done on 2024-01-21 03:40:59+00:00 [COMMAND_EXIT_CODE="0"]
+Script started on 2024-01-21 03:40:59+00:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="125" LINES="48"]
+Experiment 0...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1024' -w '299'
+
+Latency:                 745                 
+Dealer BW (KBytes):      1850.38             Dealer Msg Count:   384.07
+Rcv BW (KBytes):         33.69               Rcv Msg Count:      514.93
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 1...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1025' -w '299'
+
+Latency:                 1157                
+Dealer BW (KBytes):      2733.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         40.56               Rcv Msg Count:      513.98
+Number of timeouts: 1
+--------------------------------------------------
+Experiment 2...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1026' -w '299'
+
+Latency:                 794                 
+Dealer BW (KBytes):      1850.38             Dealer Msg Count:   384.01
+Rcv BW (KBytes):         33.69               Rcv Msg Count:      514.99
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 3...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1027' -w '299'
+
+Latency:                 1326                
+Dealer BW (KBytes):      2733.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         40.59               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 4...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1028' -w '299'
+
+Latency:                 1324                
+Dealer BW (KBytes):      2629.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         39.74               Rcv Msg Count:      514
+Number of timeouts: 1
+--------------------------------------------------
+Experiment 5...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1029' -w '299'
+
+Latency:                 1084                
+Dealer BW (KBytes):      2629.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         39.78               Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 6...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1030' -w '299'
+
+Latency:                 814                 
+Dealer BW (KBytes):      1850.38             Dealer Msg Count:   384.03
+Rcv BW (KBytes):         33.69               Rcv Msg Count:      514.97
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 7...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1031' -w '299'
+
+Latency:                 734                 
+Dealer BW (KBytes):      1850.38             Dealer Msg Count:   384.02
+Rcv BW (KBytes):         33.69               Rcv Msg Count:      514.98
+Number of timeouts: 0
+--------------------------------------------------
+Experiment 8...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1032' -w '299'
+
+Latency:                 1229                
+Dealer BW (KBytes):      2837.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         41.34               Rcv Msg Count:      513
+Number of timeouts: 2
+--------------------------------------------------
+Experiment 9...
+cli run -c node.cfg -s partial -a 'mix-ed' -d '84' -p '1033' -w '299'
+
+Latency:                 1178                
+Dealer BW (KBytes):      2837.38             Dealer Msg Count:   384
+Rcv BW (KBytes):         41.4                Rcv Msg Count:      515
+Number of timeouts: 0
+--------------------------------------------------
+------------- Avergage of Average -------------
+Latency:                 1038.5              
+Dealer BW (KBytes):      2380.18             Dealer Msg Count:   384.01
+Rcv BW (KBytes):         37.82               Rcv Msg Count:      514.59
+
+Script done on 2024-01-21 03:46:23+00:00 [COMMAND_EXIT_CODE="0"]

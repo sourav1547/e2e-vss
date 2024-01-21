@@ -16,6 +16,6 @@ stats.svg
 /aws/bin/
 /old/
 /out/
-result*
+# result*
 */__pycache__/
 aws/experiments/
