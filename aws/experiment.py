@@ -32,7 +32,7 @@ def experiment(trial, repetitions, timeout, acss_type, deg, seed, wait_time):
             print(f"Experiment {i}...")
             cmd = "cli run -c node.cfg -s full"
             if partial_stats:
-                cmd = "cli run -c node.cfg -s partial"
+                cmd = "cli run -c node.cfg -s partial -t 128 -r 128"
             if acss_type:
                 cmd += f" -a '{acss_type}' -d '{deg}' -p '{int(seed)+i}' -w '{wait_time}'"
             print(cmd)
@@ -46,9 +46,12 @@ def experiment(trial, repetitions, timeout, acss_type, deg, seed, wait_time):
 
                 rcv_stats = {"latency":[], "msg_count":[], "bandwidth":[]}
                 for value in outputs[i]:
-                    if value == "TimedOut":
+                    if value == "TimedOut" or value=="Failed":
                         timeout_count += 1
-                        continue 
+                        continue
+                    if len(value.split("\n")) < 2:
+                        print(value)
+                        continue
                     v1, v2 = value.split("\n")
                     v1_data = list(map(int, v1.split(",")))
                     v2_data = list(map(int, v2.split(",")))

@@ -11,11 +11,19 @@ NOTE: I have only test this on a Ubuntu 22.04.3 LTS machine
 
 ## Example execution
 Here is an example of how to run a 8 node experiment on AWS. Here, we are assuming, you have done the step 1 and 2 of the instructsions mentioned above correctly. The commands to run in steps 3 to 7 are as follows:
-3. `./spawn.py test 8`
-4. `./deploy_binary.py test`
-5. `./distribute_config.py test`
-6. `./experiment.py rcv 2 20 yurek 2 1024 20`
-7. `./teardown.py test`
+3. `./spawn.py expt 8`
+4. `./deploy_binary.py expt`
+5. `./distribute_config.py expt`
+6. - `./experiment.py expt 10 20 yurek 2 1024 0`
+   - `./experiment.py expt 10 20 groth 2 1024 0`
+   - `./experiment.py expt 10 20 low-ed 2 1024 0`
+   - `./experiment.py expt 10 20 low-bls 2 1024 0`
+   - `./experiment.py expt 10 20 mix-ed 4 1024 0`
+   - `./experiment.py expt 10 20 mix-bls 4 1024 0`
+7. `./teardown.py expt-no-wait`
+
+
+script -a -c "./experiment.py expt-128 10 20 yurek 42 1024 0" results_128.dat
 
 # Notes
 * You need `nix` to build the binary.

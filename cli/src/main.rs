@@ -230,7 +230,7 @@ fn main() -> Result<()> {
 
                 let id = Id::default();
                 let dst = "DST".to_string();
-                let start_delay = Duration::from_millis(2000);
+                let start_delay = Duration::from_millis(5000);
                 let self_idx = node.get_own_idx();
                 let mut rx;
                 
